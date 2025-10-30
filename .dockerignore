@@ -1,0 +1,40 @@
+# Flutter & build
+.build/
+build/
+.android/
+.ios/
+.gradle/
+.dart_tool/
+.packages
+.pub-cache/
+**/generated/
+**/intermediates/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.metadata
+**/.idea
+**/.vscode
+
+# Android
+android/.gradle/
+android/local.properties
+android/app/google-services.json
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# Misc
+.git
+.gitignore
+**/*.iml
+**/*.log
+**/*.tmp
+**/*.temp
+**/*.swp
+**/.DS_Store
+
+# Assets caches
+node_modules/

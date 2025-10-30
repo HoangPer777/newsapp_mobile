@@ -1,0 +1,71 @@
+# Flutter
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+.melos_tool/
+coverage/
+.pub-cache/
+
+# Build outputs
+build/
+**/generated/
+**/intermediates/
+
+# Android
+android/.gradle/
+android/.idea/
+android/local.properties
+android/**/release/
+android/**/profile/
+android/**/debug/
+android/app/*.keystore
+android/app/*.jks
+android/app/google-services.json
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/App.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Runner/GeneratedPluginRegistrant.*
+ios/Runner.xcworkspace/
+
+# Xcode
+**/*.xcuserstate
+**/*.xcscmblueprint
+**/*.xccheckout
+**/*.moved-aside
+**/*.xcworkspacedata
+**/*.xcsettings
+**/*.mode1v3
+**/*.mode2v3
+**/*.pbxuser
+**/*.perspectivev3
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+
+# OS / Misc
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.temp
+*.swp
+
+# Node (if present)
+node_modules/
+
+# Env / secrets
+.env
+.env.*
+**/*.pem
+**/*.key
+**/*.crt
+**/*.p12
