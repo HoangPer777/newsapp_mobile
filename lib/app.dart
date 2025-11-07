@@ -9,6 +9,7 @@ class NewsApp extends StatelessWidget {
     final router = AppRouter().router;
     return MaterialApp.router(
       title: 'NewsApp',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
       routerConfig: router,
     );
