@@ -13,7 +13,16 @@ class DioClient {
     baseUrl: Env.apiBase,
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 20),
+    validateStatus: (status) => true, // <<==== THÊM DÒNG NÀY
+
   ))
+  // 🎯 THÊM LOGINTERCEPTOR VÀO ĐÂY (Vị trí đầu tiên)
+    ..interceptors.add(LogInterceptor(
+      requestBody: true,    // In body yêu cầu
+      responseBody: true,   // In body phản hồi
+      requestHeader: true,  // In headers yêu cầu
+      error: true,          // In chi tiết lỗi
+    ))
     ..interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
         final token = await _storage.read(key: 'access_token');
