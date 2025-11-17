@@ -65,6 +65,7 @@ class HomePage extends ConsumerWidget {
             onTap: (i) {
               if (i == 1) context.push('/search');
               if (i == 2) context.push('/chat');
+              if (i == 4) context.push('/menu');
             },
           ),
         ),
