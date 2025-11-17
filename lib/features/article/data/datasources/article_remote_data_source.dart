@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/di/providers.dart';
 import '../models/article_model.dart';
-import '../../../../core/api/dio_client.dart'; // Giả sử dioProvider nằm ở đây
+import '../../../../core/api/dio_client.dart';
 
 abstract class ArticleRemoteDataSource {
   Future<ArticleModel> fetchArticleBySlug(String slug);

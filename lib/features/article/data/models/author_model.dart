@@ -6,13 +6,11 @@ part 'author_model.g.dart';
 class AuthorModel {
   final int id;
 
-  // 🎯 SỬA: XÓA @JsonKey(name: 'display_name')
   // Vì JSON trả về 'displayName', nó khớp với tên trường Dart.
   final String displayName;
 
   final String? email;
 
-  // 🎯 SỬA: Đổi tên field Dart để khớp với tên JSON (passwordHash)
   @JsonKey(name: 'passwordHash')
   final String? passwordHash;
 

@@ -178,7 +178,7 @@ class ArticlePage extends ConsumerWidget {
             ),
             const Divider(height: 30, color: Colors.white12),
 
-            // ⭐ MỚI: HÌNH ẢNH BÀI BÁO
+            // ⭐HÌNH ẢNH BÀI BÁO
             // Giả sử model 'article' của bạn có trường 'image'
             if (article.image != null && article.image.isNotEmpty) ...[
               ClipRRect(
@@ -230,8 +230,7 @@ class ArticlePage extends ConsumerWidget {
   }
 }
 
-// ⭐ MỚI: WIDGET CHO PHẦN BÌNH LUẬN (BOTTOM SHEET)
-// (Bạn có thể tách ra file riêng nếu muốn)
+// ⭐  WIDGET CHO PHẦN BÌNH LUẬN (BOTTOM SHEET)
 class _CommentsBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

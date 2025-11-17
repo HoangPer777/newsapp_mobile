@@ -5,8 +5,6 @@ import '../../domain/entities/article_entity.dart';
 import '../../domain/repositories/article_repository.dart';
 import '../datasources/article_remote_data_source.dart';
 
-// (⚠️ XÓA (DELETE) cái 'import' ... 'article_pagination.dart' tào lao đi)
-
 class ArticleRepositoryImpl implements ArticleRepository {
   final ArticleRemoteDataSource remoteDataSource;
 
@@ -21,7 +19,7 @@ class ArticleRepositoryImpl implements ArticleRepository {
 
 }
 
-// Provider (Giữ nguyên)
+// Provider
 final articleRepositoryProvider = Provider<ArticleRepository>((ref) {
   final remoteDataSource = ref.watch(articleRemoteDataSourceProvider);
   return ArticleRepositoryImpl(remoteDataSource: remoteDataSource);
