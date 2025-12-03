@@ -124,18 +124,70 @@
 //     );
 //   }
 // }
-//
 
+
+//test trang chi tiết
+// import 'package:flutter/material.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'features/article/presentation/widgets/article_page.dart';
+//
+// // ⭐ 1. IMPORT file style "xịn" của Han vào
+// import 'features/article/presentation/article_style.dart';
+// // (Han nhớ sửa đường dẫn (path) này cho đúng nha!)
+//
+// void main() {
+//   // Bọc ProviderScope cho Riverpod hoạt động
+//   runApp(const ProviderScope(child: MyApp()));
+// }
+//
+// class MyApp extends StatelessWidget {
+//   const MyApp({super.key});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       title: 'Flutter Article App',
+//
+//       // ⭐ 2. SỬA LẠI THEME
+//       // Dùng theme sáng (cũ) của Han
+//       theme: ThemeData(
+//         primarySwatch: Colors.red,
+//       ),
+//
+//       // ⭐ 3. DÙNG THEME TỐI "XỊN" CỦA HAN
+//       // Han dùng "biến" (variable) Han vừa tạo bên file style:
+//       darkTheme: newsAppDarkTheme,
+//
+//       // ⭐ 4. "RA LỆNH" BẬT ĐÈN ĐEN
+//       themeMode: ThemeMode.dark,
+//
+//       // Giả lập Home Page gọi trang chi tiết bài viết với SLUG cụ thể
+//       // home: const ArticlePage(articleSlug: 'flutter-clean-architecture-riverpod'),
+// // (Trong file main.dart)
+//       home: const ArticlePage(articleSlug: 'phu-quoc-top-10-hon-dao-chau-a'),
+//     );
+//   }
+// }
+
+
+//test home
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'features/article/presentation/widgets/article_page.dart';
 
-// ⭐ 1. IMPORT file style "xịn" của Han vào
+// 1. Import file Style (Chứa theme Dark Mode màu đỏ)
+// Đảm bảo đường dẫn này đúng với cấu trúc thư mục của bạn
 import 'features/article/presentation/article_style.dart';
-// (Han nhớ sửa đường dẫn (path) này cho đúng nha!)
+
+// 2. Import trang chủ (HomePage) - Nơi hiển thị danh sách tin
+import 'features/home/presentation/home_page.dart';
+import 'features/home/presentation/pages/home_page.dart';
 
 void main() {
-  // Bọc ProviderScope cho Riverpod hoạt động
+  // Đảm bảo Binding được khởi tạo trước khi gọi native code (nếu có)
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 3. BẮT BUỘC: Bọc toàn bộ ứng dụng trong ProviderScope
+  // Nếu thiếu dòng này, Riverpod sẽ báo lỗi "No ProviderScope found"
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -145,25 +197,18 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Article App',
+      title: 'Vnx News',
 
-      // ⭐ 2. SỬA LẠI THEME
-      // Dùng theme sáng (cũ) của Han
-      theme: ThemeData(
-        primarySwatch: Colors.red,
-      ),
+      // Tắt dải băng "DEBUG" màu đỏ ở góc phải màn hình
+      debugShowCheckedModeBanner: false,
 
-      // ⭐ 3. DÙNG THEME TỐI "XỊN" CỦA HAN
-      // Han dùng "biến" (variable) Han vừa tạo bên file style:
-      darkTheme: newsAppDarkTheme,
+      // 4. Áp dụng Theme Dark Mode + Màu đỏ (#bb1819)
+      // Biến 'newsAppDarkTheme' được định nghĩa trong file 'article_style.dart'
+      theme: newsAppDarkTheme,
 
-      // ⭐ 4. "RA LỆNH" BẬT ĐÈN ĐEN
-      themeMode: ThemeMode.dark,
-
-      // Giả lập Home Page gọi trang chi tiết bài viết với SLUG cụ thể
-      // home: const ArticlePage(articleSlug: 'flutter-clean-architecture-riverpod'),
-// (Trong file main.dart)
-      home: const ArticlePage(articleSlug: 'phu-quoc-top-10-hon-dao-chau-a'),
+      // 5. Đặt màn hình đầu tiên là HomePage
+      // (Màn hình này sẽ tự động gọi API lấy danh sách tin tức)
+      home: const HomePage(),
     );
   }
 }
