@@ -417,8 +417,9 @@ class HomePage extends ConsumerWidget {
           ),
           bottomNavigationBar: _BottomNav(
             onTap: (i) {
-              if (i == 1) context.push('/search'); // Đảm bảo route này tồn tại
-              if (i == 2) context.push('/chat');   // Đảm bảo route này tồn tại
+              if (i == 1) context.push('/search');
+              if (i == 2) context.push('/chat');
+              if (i == 4) context.push('/menu');
             },
           ),
         ),
