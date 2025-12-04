@@ -178,9 +178,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Đảm bảo đường dẫn này đúng với cấu trúc thư mục của bạn
 import 'features/article/presentation/article_style.dart';
 
-// 2. Import trang chủ (HomePage) - Nơi hiển thị danh sách tin
-import 'features/home/presentation/home_page.dart';
-import 'features/home/presentation/pages/home_page.dart';
+// 2. Import app.dart để sử dụng router
+import 'app.dart';
 
 void main() {
   // Đảm bảo Binding được khởi tạo trước khi gọi native code (nếu có)
@@ -188,27 +187,5 @@ void main() {
 
   // 3. BẮT BUỘC: Bọc toàn bộ ứng dụng trong ProviderScope
   // Nếu thiếu dòng này, Riverpod sẽ báo lỗi "No ProviderScope found"
-  runApp(const ProviderScope(child: MyApp()));
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Vnx News',
-
-      // Tắt dải băng "DEBUG" màu đỏ ở góc phải màn hình
-      debugShowCheckedModeBanner: false,
-
-      // 4. Áp dụng Theme Dark Mode + Màu đỏ (#bb1819)
-      // Biến 'newsAppDarkTheme' được định nghĩa trong file 'article_style.dart'
-      theme: newsAppDarkTheme,
-
-      // 5. Đặt màn hình đầu tiên là HomePage
-      // (Màn hình này sẽ tự động gọi API lấy danh sách tin tức)
-      home: const HomePage(),
-    );
-  }
+  runApp(const ProviderScope(child: NewsApp()));
 }

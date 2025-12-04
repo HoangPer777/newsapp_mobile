@@ -196,7 +196,7 @@
 //         ClipRRect(
 //           borderRadius: BorderRadius.circular(4), // Bo góc
 //           child: Image.asset(
-//             'lib/assets/images/logo_VNXnews.png',
+//             'assets/images/logo_VNXnews.png',
 //             height: 26,
 //             width: 26,
 //             fit: BoxFit.cover,
@@ -599,8 +599,19 @@ class _TopAppBar extends StatelessWidget {
           ),
         ],
       ),
-      actions: const [
+      actions: [
+        // Nút test đăng nhập (tạm thời)
         Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: IconButton(
+            icon: const Icon(Icons.login, color: Colors.white70),
+            onPressed: () {
+              context.push('/login');
+            },
+            tooltip: 'Test Login',
+          ),
+        ),
+        const Padding(
           padding: EdgeInsets.only(right: 8),
           child: _CircleIcon(icon: Icons.notifications_none),
         ),
@@ -652,7 +663,7 @@ class _VnxNews extends StatelessWidget {
         // ClipRRect(
         //   borderRadius: BorderRadius.circular(4),
         //   child: Image.asset(
-        //     'lib/assets/images/logo_VNXnews.png', // Đảm bảo ảnh này tồn tại
+        //     'assets/images/logo_VNXnews.png', // Đảm bảo ảnh này tồn tại
         //     height: 26,
         //     width: 26,
         //     fit: BoxFit.cover,

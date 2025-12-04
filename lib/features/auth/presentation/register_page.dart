@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _RegisterPageState extends State<RegisterPage> {
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
@@ -16,6 +17,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -23,7 +25,8 @@ class _LoginPageState extends State<LoginPage> {
 
   void _handleContinue() {
     if (_formKey.currentState!.validate()) {
-      // TODO: Implement login logic
+      // TODO: Implement register logic
+      print('Name: ${_nameController.text}');
       print('Email: ${_emailController.text}');
       print('Password: ${_passwordController.text}');
     }
@@ -31,7 +34,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _handleSocialLogin(String provider) {
     // TODO: Implement social login logic
-    print('Login with $provider');
+    print('Register with $provider');
   }
 
   @override
@@ -60,6 +63,19 @@ class _LoginPageState extends State<LoginPage> {
                 // Title with link
                 _buildTitleWithLink(),
                 const SizedBox(height: 40),
+                // Full Name Label
+                const Text(
+                  'Họ và Tên',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Full Name Input Field
+                _buildNameField(),
+                const SizedBox(height: 24),
                 // Email Label
                 const Text(
                   'Email',
@@ -95,7 +111,7 @@ class _LoginPageState extends State<LoginPage> {
                 // Social Login Buttons
                 _buildSocialLoginButton(
                   icon: Icons.phone_iphone,
-                  label: 'Đăng nhập bằng Apple ID',
+                  label: 'Đăng ký bằng Apple ID',
                   onTap: () => _handleSocialLogin('Apple'),
                   customIcon: Container(
                     width: 24,
@@ -114,7 +130,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 12),
                 _buildSocialLoginButton(
                   icon: Icons.facebook,
-                  label: 'Đăng nhập bằng Facebook',
+                  label: 'Đăng ký bằng Facebook',
                   onTap: () => _handleSocialLogin('Facebook'),
                   customIcon: Container(
                     width: 24,
@@ -134,7 +150,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 12),
                 _buildSocialLoginButton(
                   icon: Icons.g_mobiledata,
-                  label: 'Đăng nhập bằng Google',
+                  label: 'Đăng ký bằng Google',
                   onTap: () => _handleSocialLogin('Google'),
                   customIcon: Container(
                     width: 24,
@@ -172,14 +188,14 @@ class _LoginPageState extends State<LoginPage> {
           color: Colors.white,
         ),
         children: [
-          const TextSpan(text: 'Đăng nhập / '),
+          const TextSpan(text: 'Tạo tài khoản / '),
           WidgetSpan(
             child: GestureDetector(
               onTap: () {
-                context.push('/register');
+                context.push('/login');
               },
               child: const Text(
-                'Tạo tài khoản',
+                'Đăng nhập',
                 style: TextStyle(
                   color: Color(0xFFBB1819),
                   decoration: TextDecoration.underline,
@@ -237,6 +253,39 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildNameField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TextFormField(
+        controller: _nameController,
+        keyboardType: TextInputType.name,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: 'Nhập họ và tên của bạn',
+          hintStyle: const TextStyle(color: Colors.white54),
+          prefixIcon: const Icon(Icons.person_outline, color: Colors.white70),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
+        ),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Vui lòng nhập họ và tên';
+          }
+          if (value.length < 2) {
+            return 'Họ và tên phải có ít nhất 2 ký tự';
+          }
+          return null;
+        },
+      ),
     );
   }
 
@@ -462,3 +511,4 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+

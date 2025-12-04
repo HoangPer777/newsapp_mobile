@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // 1. Import Riverpod
 import 'package:go_router/go_router.dart'; // 2. Import GoRouter
 import 'core/router/app_router.dart'; // Router của bạn
+import 'features/article/presentation/article_style.dart'; // Import theme dark mode
 
 // 3. Tạo một Provider để "cung cấp" AppRouter
 // Điều này đảm bảo router chỉ được tạo MỘT LẦN
@@ -38,9 +39,9 @@ class NewsApp extends ConsumerWidget { // <-- Thay vì StatelessWidget
 
     // Giữ nguyên phần còn lại
     return MaterialApp.router(
-      title: 'NewsApp',
+      title: 'Vnx News',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
+      theme: newsAppDarkTheme, // Sử dụng theme dark mode
       routerConfig: router,
     );
   }
