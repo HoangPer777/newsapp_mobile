@@ -3,14 +3,15 @@ import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import '../data/auth_repository.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _RegisterPageState extends State<RegisterPage> {
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
@@ -20,70 +21,53 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _handleContinue() async {
-    print('Login button pressed'); // DEBUG LOG
     if (_formKey.currentState!.validate()) {
-      print('Form is valid, starting login...'); // DEBUG LOG
       setState(() => _isLoading = true);
       try {
-        print('Calling AuthRepository.login...'); // DEBUG LOG
-        await _authRepository.login(
+        await _authRepository.register(
           _emailController.text,
           _passwordController.text,
+          _nameController.text,
         );
-        print('Login successful, navigating...'); // DEBUG LOG
         if (mounted) {
           context.go('/');
         }
       } on DioException catch (e) {
-        print('DioException caught: ${e.message}'); // DEBUG LOG
-        print('Response data: ${e.response?.data}'); // DEBUG LOG
-        
-        String errorMessage = 'Đăng nhập thất bại';
-        if (e.response?.data is Map<String, dynamic>) {
-          errorMessage = e.response?.data['message'] ?? errorMessage;
-        } else if (e.response?.data is String) {
-          // Nếu server trả về HTML (ví dụ: trang login wifi), hiển thị thông báo lỗi chung
-          errorMessage = 'Lỗi kết nối: Server trả về dữ liệu không hợp lệ (có thể do mạng WiFi chặn).';
-        }
-
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(errorMessage),
+              content: Text(e.response?.data?['message'] ?? 'Đăng ký thất bại'),
               backgroundColor: Colors.red,
             ),
           );
         }
       } catch (e) {
-        print('General Exception caught: $e'); // DEBUG LOG
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Đã có lỗi xảy ra: $e'),
+            const SnackBar(
+              content: Text('Đã có lỗi xảy ra'),
               backgroundColor: Colors.red,
             ),
           );
         }
       } finally {
-        print('Login process finished'); // DEBUG LOG
         if (mounted) {
           setState(() => _isLoading = false);
         }
       }
-    } else {
-      print('Form validation failed'); // DEBUG LOG
     }
   }
 
   void _handleSocialLogin(String provider) {
     // TODO: Implement social login logic
-    print('Login with $provider');
+    print('Register with $provider');
   }
 
   @override
@@ -119,6 +103,19 @@ class _LoginPageState extends State<LoginPage> {
                   child: _buildTitleWithLink(),
                 ),
                 const SizedBox(height: 40),
+                // Full Name Label
+                const Text(
+                  'Họ và Tên',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Full Name Input Field
+                _buildNameField(),
+                const SizedBox(height: 24),
                 // Email Label
                 const Text(
                   'Email',
@@ -154,7 +151,7 @@ class _LoginPageState extends State<LoginPage> {
                 // Social Login Buttons
                 _buildSocialLoginButton(
                   icon: Icons.phone_iphone,
-                  label: 'Đăng nhập bằng Apple ID',
+                  label: 'Đăng ký bằng Apple ID',
                   onTap: () => _handleSocialLogin('Apple'),
                   customIcon: Container(
                     width: 24,
@@ -173,7 +170,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 12),
                 _buildSocialLoginButton(
                   icon: Icons.facebook,
-                  label: 'Đăng nhập bằng Facebook',
+                  label: 'Đăng ký bằng Facebook',
                   onTap: () => _handleSocialLogin('Facebook'),
                   customIcon: Container(
                     width: 24,
@@ -193,7 +190,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 12),
                 _buildSocialLoginButton(
                   icon: Icons.g_mobiledata,
-                  label: 'Đăng nhập bằng Google',
+                  label: 'Đăng ký bằng Google',
                   onTap: () => _handleSocialLogin('Google'),
                   customIcon: Container(
                     width: 24,
@@ -232,19 +229,18 @@ class _LoginPageState extends State<LoginPage> {
         ),
         children: [
           const TextSpan(
-            text: 'Đăng nhập / ',
+            text: 'Tạo tài khoản / ',
           ),
           WidgetSpan(
             alignment: PlaceholderAlignment.middle,
             child: GestureDetector(
               onTap: () {
-                context.push('/register');
+                context.push('/login');
               },
               child: const Text(
-                'Tạo tài khoản',
+                'Đăng nhập',
                 style: TextStyle(
                   color: Color(0xFFBB1819),
-                  // decoration: TextDecoration.underline,
                   fontSize: 18,
                 ),
               ),
@@ -266,18 +262,73 @@ class _LoginPageState extends State<LoginPage> {
             height: 26,
             width: 26,
             fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              // Fallback nếu không tìm thấy logo
+              return Container(
+                height: 26,
+                width: 26,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFBB1819),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Center(
+                  child: Text(
+                    'E',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: 8),
         const Text(
           'Vnx news',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w800,
             letterSpacing: 1.2,
+            fontSize: 18,
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildNameField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TextFormField(
+        controller: _nameController,
+        keyboardType: TextInputType.name,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: 'Nhập họ và tên của bạn',
+          hintStyle: const TextStyle(color: Colors.white54),
+          prefixIcon: const Icon(Icons.person_outline, color: Colors.white70),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
+        ),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Vui lòng nhập họ và tên';
+          }
+          if (value.length < 2) {
+            return 'Họ và tên phải có ít nhất 2 ký tự';
+          }
+          return null;
+        },
+      ),
     );
   }
 

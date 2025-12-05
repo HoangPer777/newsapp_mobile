@@ -196,7 +196,7 @@
 //         ClipRRect(
 //           borderRadius: BorderRadius.circular(4), // Bo góc
 //           child: Image.asset(
-//             'lib/assets/images/logo_VNXnews.png',
+//             'assets/images/logo_VNXnews.png',
 //             height: 26,
 //             width: 26,
 //             fit: BoxFit.cover,
@@ -342,8 +342,6 @@
 // //   });
 // // }
 
-
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -408,8 +406,9 @@ class HomePage extends ConsumerWidget {
                 // Các tab còn lại: Giữ nguyên placeholder hoặc tái sử dụng _NewsTab
                 ...List.generate(
                   categories.length - 1,
-                      (_) => const Center(
-                    child: Text('Đang cập nhật...', style: TextStyle(color: Colors.white70)),
+                  (_) => const Center(
+                    child: Text('Đang cập nhật...',
+                        style: TextStyle(color: Colors.white70)),
                   ),
                 ),
               ],
@@ -442,12 +441,15 @@ class _NewsTab extends ConsumerWidget {
       error: (err, stack) => Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Text('Lỗi tải tin: $err', style: const TextStyle(color: Colors.red)),
+          child: Text('Lỗi tải tin: $err',
+              style: const TextStyle(color: Colors.red)),
         ),
       ),
       data: (articles) {
         if (articles.isEmpty) {
-          return const Center(child: Text("Chưa có bài báo nào", style: TextStyle(color: Colors.white70)));
+          return const Center(
+              child: Text("Chưa có bài báo nào",
+                  style: TextStyle(color: Colors.white70)));
         }
 
         // Sử dụng ListView.builder để hiển thị danh sách
@@ -455,7 +457,8 @@ class _NewsTab extends ConsumerWidget {
         return ListView.separated(
           padding: const EdgeInsets.symmetric(vertical: 12),
           itemCount: articles.length,
-          separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFF2A2C30)),
+          separatorBuilder: (_, __) =>
+              const Divider(height: 1, color: Color(0xFF2A2C30)),
           itemBuilder: (context, index) {
             return _ArticleItem(article: articles[index]);
           },
@@ -480,7 +483,8 @@ class _ArticleItem extends StatelessWidget {
           context,
           MaterialPageRoute(
             // Truyền trực tiếp Entity sang trang chi tiết
-            builder: (context) => ArticlePage(article: article,
+            builder: (context) => ArticlePage(
+              article: article,
               articleSlug: article.id.toString(), // <-- NÊN SỬA THÀNH CÁI NÀY
               // articleSlug: '',
             ),
@@ -504,7 +508,8 @@ class _ArticleItem extends StatelessWidget {
                   width: 110,
                   height: 80,
                   color: const Color(0xFF2A2C30),
-                  child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                  child:
+                      const Icon(Icons.image_not_supported, color: Colors.grey),
                 ),
               ),
             ),
@@ -534,7 +539,8 @@ class _ArticleItem extends StatelessWidget {
                     children: [
                       // Icon category hoặc tác giả
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: const Color(0xFFbb1819).withOpacity(0.2),
                           borderRadius: BorderRadius.circular(4),
@@ -545,12 +551,14 @@ class _ArticleItem extends StatelessWidget {
                         // ),
                         child: Text(
                           // Logic: Nếu có category thì hiện và viết hoa, nếu rỗng thì hiện 'TIN TỨC'
-                          (article.category.isNotEmpty ? article.category : 'Tin tức').toUpperCase(),
+                          (article.category.isNotEmpty
+                                  ? article.category
+                                  : 'Tin tức')
+                              .toUpperCase(),
                           style: const TextStyle(
                               color: Color(0xFFbb1819),
                               fontSize: 10,
-                              fontWeight: FontWeight.bold
-                          ),
+                              fontWeight: FontWeight.bold),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -558,14 +566,17 @@ class _ArticleItem extends StatelessWidget {
                         child: Text(
                           article.authorName,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.grey, fontSize: 11),
+                          style:
+                              const TextStyle(color: Colors.grey, fontSize: 11),
                         ),
                       ),
-                      const Icon(Icons.access_time, size: 12, color: Colors.grey),
+                      const Icon(Icons.access_time,
+                          size: 12, color: Colors.grey),
                       const SizedBox(width: 4),
                       Text(
                         DateFormat('dd/MM').format(article.publishedAt),
-                        style: const TextStyle(color: Colors.grey, fontSize: 11),
+                        style:
+                            const TextStyle(color: Colors.grey, fontSize: 11),
                       ),
                     ],
                   )
@@ -599,8 +610,19 @@ class _TopAppBar extends StatelessWidget {
           ),
         ],
       ),
-      actions: const [
+      actions: [
+        // Nút test đăng nhập (tạm thời)
         Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: IconButton(
+            icon: const Icon(Icons.login, color: Colors.white70),
+            onPressed: () {
+              context.push('/login');
+            },
+            tooltip: 'Test Login',
+          ),
+        ),
+        const Padding(
           padding: EdgeInsets.only(right: 8),
           child: _CircleIcon(icon: Icons.notifications_none),
         ),
@@ -649,17 +671,15 @@ class _VnxNews extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // ClipRRect(
-        //   borderRadius: BorderRadius.circular(4),
-        //   child: Image.asset(
-        //     'lib/assets/images/logo_VNXnews.png', // Đảm bảo ảnh này tồn tại
-        //     height: 26,
-        //     width: 26,
-        //     fit: BoxFit.cover,
-        //     errorBuilder: (_,__,___) => const Icon(Icons.newspaper, color: Colors.white),
-        //   ),
-        // ),
-        const Icon(Icons.newspaper, color: Color(0xFFbb1819)), // Thay thế tạm nếu chưa có logo
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Image.asset(
+            'assets/images/logo_VNXnews.png',
+            height: 26,
+            width: 26,
+            fit: BoxFit.cover,
+          ),
+        ),
         const SizedBox(width: 6),
         const Text(
           'Vnx news',
@@ -727,7 +747,8 @@ class _BottomNav extends StatelessWidget {
         ),
         NavigationDestination(
           icon: Icon(Icons.menu_open_outlined, color: Colors.white70),
-          selectedIcon: Icon(Icons.menu_open_outlined, color: Color(0xFFbb1819)),
+          selectedIcon:
+              Icon(Icons.menu_open_outlined, color: Color(0xFFbb1819)),
           label: 'Menu',
         ),
       ],
@@ -746,7 +767,8 @@ class _TabHeaderDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => 44;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return child;
   }
 

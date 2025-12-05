@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/widgets.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/auth/presentation/login_page.dart';
+import '../../features/auth/presentation/register_page.dart';
 import '../../features/article/presentation/widgets/article_page.dart';
 import '../../features/chatbot/presentation/chat_page.dart';
 import '../../features/search/presentation/search_page.dart';
@@ -15,6 +16,7 @@ class AppRouter {
     routes: [
       GoRoute(path: '/', builder: (c, s) => const HomePage()),
       GoRoute(path: '/login', builder: (c, s) => const LoginPage()),
+      GoRoute(path: '/register', builder: (c, s) => const RegisterPage()),
       GoRoute(path: '/article/:id', builder: (c, s) {
         final id = s.pathParameters['id']!;
         // ✅ Sửa lỗi: Truyền giá trị vào tham số articleSlug
