@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
+import '../data/auth_repository.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,6 +15,8 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   final _formKey = GlobalKey<FormState>();
+  final _authRepository = AuthRepository();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -21,11 +25,59 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _handleContinue() {
+  Future<void> _handleContinue() async {
+    print('Login button pressed'); // DEBUG LOG
     if (_formKey.currentState!.validate()) {
-      // TODO: Implement login logic
-      print('Email: ${_emailController.text}');
-      print('Password: ${_passwordController.text}');
+      print('Form is valid, starting login...'); // DEBUG LOG
+      setState(() => _isLoading = true);
+      try {
+        print('Calling AuthRepository.login...'); // DEBUG LOG
+        await _authRepository.login(
+          _emailController.text,
+          _passwordController.text,
+        );
+        print('Login successful, navigating...'); // DEBUG LOG
+        if (mounted) {
+          context.go('/');
+        }
+      } on DioException catch (e) {
+        print('DioException caught: ${e.message}'); // DEBUG LOG
+        print('Response data: ${e.response?.data}'); // DEBUG LOG
+        
+        String errorMessage = 'Đăng nhập thất bại';
+        if (e.response?.data is Map<String, dynamic>) {
+          errorMessage = e.response?.data['message'] ?? errorMessage;
+        } else if (e.response?.data is String) {
+          // Nếu server trả về HTML (ví dụ: trang login wifi), hiển thị thông báo lỗi chung
+          errorMessage = 'Lỗi kết nối: Server trả về dữ liệu không hợp lệ (có thể do mạng WiFi chặn).';
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        print('General Exception caught: $e'); // DEBUG LOG
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Đã có lỗi xảy ra: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        print('Login process finished'); // DEBUG LOG
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
+    } else {
+      print('Form validation failed'); // DEBUG LOG
     }
   }
 
@@ -45,8 +97,13 @@ class _LoginPageState extends State<LoginPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
+        leadingWidth: 56,
         title: _buildLogo(),
         centerTitle: true,
+        actions: [
+          // Thêm một widget trống để cân bằng với leading button
+          const SizedBox(width: 56),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -58,7 +115,9 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 const SizedBox(height: 32),
                 // Title with link
-                _buildTitleWithLink(),
+                Center(
+                  child: _buildTitleWithLink(),
+                ),
                 const SizedBox(height: 40),
                 // Email Label
                 const Text(
@@ -167,13 +226,16 @@ class _LoginPageState extends State<LoginPage> {
     return RichText(
       text: TextSpan(
         style: const TextStyle(
-          fontSize: 24,
+          fontSize: 20,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
         children: [
-          const TextSpan(text: 'Đăng nhập / '),
+          const TextSpan(
+            text: 'Đăng nhập / ',
+          ),
           WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
             child: GestureDetector(
               onTap: () {
                 context.push('/register');
@@ -182,7 +244,8 @@ class _LoginPageState extends State<LoginPage> {
                 'Tạo tài khoản',
                 style: TextStyle(
                   color: Color(0xFFBB1819),
-                  decoration: TextDecoration.underline,
+                  // decoration: TextDecoration.underline,
+                  fontSize: 18,
                 ),
               ),
             ),
@@ -203,37 +266,15 @@ class _LoginPageState extends State<LoginPage> {
             height: 26,
             width: 26,
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              // Fallback nếu không tìm thấy logo
-              return Container(
-                height: 26,
-                width: 26,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFBB1819),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Center(
-                  child: Text(
-                    'E',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                ),
-              );
-            },
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 6),
         const Text(
-          'VNEXPRESS',
+          'Vnx news',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w800,
             letterSpacing: 1.2,
-            fontSize: 18,
           ),
         ),
       ],
@@ -289,7 +330,9 @@ class _LoginPageState extends State<LoginPage> {
           prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
           suffixIcon: IconButton(
             icon: Icon(
-              _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+              _obscurePassword
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
               color: Colors.white70,
             ),
             onPressed: () {
@@ -330,13 +373,22 @@ class _LoginPageState extends State<LoginPage> {
           ),
           elevation: 0,
         ),
-        child: const Text(
-          'Tiếp tục',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        child: _isLoading
+            ? const SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : const Text(
+                'Tiếp tục',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
       ),
     );
   }

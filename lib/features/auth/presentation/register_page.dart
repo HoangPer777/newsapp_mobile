@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
+import '../data/auth_repository.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -14,6 +16,8 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   final _formKey = GlobalKey<FormState>();
+  final _authRepository = AuthRepository();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -23,12 +27,41 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  void _handleContinue() {
+  Future<void> _handleContinue() async {
     if (_formKey.currentState!.validate()) {
-      // TODO: Implement register logic
-      print('Name: ${_nameController.text}');
-      print('Email: ${_emailController.text}');
-      print('Password: ${_passwordController.text}');
+      setState(() => _isLoading = true);
+      try {
+        await _authRepository.register(
+          _emailController.text,
+          _passwordController.text,
+          _nameController.text,
+        );
+        if (mounted) {
+          context.go('/');
+        }
+      } on DioException catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.response?.data?['message'] ?? 'Đăng ký thất bại'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Đã có lỗi xảy ra'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
     }
   }
 
@@ -48,8 +81,13 @@ class _RegisterPageState extends State<RegisterPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
+        leadingWidth: 56,
         title: _buildLogo(),
         centerTitle: true,
+        actions: [
+          // Thêm một widget trống để cân bằng với leading button
+          const SizedBox(width: 56),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -61,7 +99,9 @@ class _RegisterPageState extends State<RegisterPage> {
               children: [
                 const SizedBox(height: 32),
                 // Title with link
-                _buildTitleWithLink(),
+                Center(
+                  child: _buildTitleWithLink(),
+                ),
                 const SizedBox(height: 40),
                 // Full Name Label
                 const Text(
@@ -183,13 +223,16 @@ class _RegisterPageState extends State<RegisterPage> {
     return RichText(
       text: TextSpan(
         style: const TextStyle(
-          fontSize: 24,
+          fontSize: 20,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
         children: [
-          const TextSpan(text: 'Tạo tài khoản / '),
+          const TextSpan(
+            text: 'Tạo tài khoản / ',
+          ),
           WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
             child: GestureDetector(
               onTap: () {
                 context.push('/login');
@@ -198,7 +241,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 'Đăng nhập',
                 style: TextStyle(
                   color: Color(0xFFBB1819),
-                  decoration: TextDecoration.underline,
+                  fontSize: 18,
                 ),
               ),
             ),
@@ -244,7 +287,7 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         const SizedBox(width: 8),
         const Text(
-          'VNEXPRESS',
+          'Vnx news',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w800,
@@ -338,7 +381,9 @@ class _RegisterPageState extends State<RegisterPage> {
           prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
           suffixIcon: IconButton(
             icon: Icon(
-              _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+              _obscurePassword
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
               color: Colors.white70,
             ),
             onPressed: () {
@@ -379,13 +424,22 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
           elevation: 0,
         ),
-        child: const Text(
-          'Tiếp tục',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        child: _isLoading
+            ? const SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : const Text(
+                'Tiếp tục',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
       ),
     );
   }
@@ -511,4 +565,3 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 }
-
