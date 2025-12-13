@@ -6,7 +6,6 @@ part 'author_model.g.dart';
 class AuthorModel {
   final int id;
 
-  // Vì JSON trả về 'displayName', nó khớp với tên trường Dart.
   final String displayName;
 
   final String? email;
@@ -31,5 +30,6 @@ class AuthorModel {
   AuthorEntity toEntity() {
     // Chỉ truyền các trường cần thiết vào Entity
     return AuthorEntity(id: id, displayName: displayName);
+
   }
 }
