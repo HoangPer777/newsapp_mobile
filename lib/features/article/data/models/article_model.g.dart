@@ -10,7 +10,7 @@ ArticleModel _$ArticleModelFromJson(Map<String, dynamic> json) => ArticleModel(
       id: (json['id'] as num).toInt(),
       title: json['title'] as String?,
       slug: json['slug'] as String?,
-      contentPlain: json['contentPlain'] as String?,
+      content: json['content'] as String?,
       category: json['category'] as String?,
       publishedAt: json['publishedAt'] == null
           ? null
@@ -26,7 +26,7 @@ Map<String, dynamic> _$ArticleModelToJson(ArticleModel instance) =>
       'id': instance.id,
       'title': instance.title,
       'slug': instance.slug,
-      'contentPlain': instance.contentPlain,
+      'content': instance.content,
       'category': instance.category,
       'publishedAt': instance.publishedAt?.toIso8601String(),
       'author': instance.author,

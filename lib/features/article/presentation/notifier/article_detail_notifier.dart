@@ -1,5 +1,3 @@
-// lib/features/article/presentation/notifier/article_detail_notifier.dart
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/usecases/get_article_detail_usecase.dart';
 import 'article_detail_state.dart';
