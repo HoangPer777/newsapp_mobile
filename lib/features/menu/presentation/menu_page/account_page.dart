@@ -1,39 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/auth_provider.dart';
 
-class AccountPage extends StatelessWidget {
+class AccountPage extends ConsumerWidget {
   const AccountPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authProvider).user;
+
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF1B1C1E),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1B1C1E),
         elevation: 0,
-        title: const Text(
-          'Tài khoản',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('Tài khoản', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: ListView(
         children: [
           const SizedBox(height: 12),
 
-          // ==== TIÊU ĐỀ "Tài khoản" ====
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               'Tài khoản',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white70,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.white70),
             ),
           ),
 
-          // ====== MỤC ======
           _item(
             icon: Icons.person_outline,
             text: "Sửa tài khoản",
@@ -47,15 +49,11 @@ class AccountPage extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // ==== TIÊU ĐỀ "Hoạt động" ====
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               'Hoạt động',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white70,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.white70),
             ),
           ),
 
@@ -65,18 +63,20 @@ class AccountPage extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // ==== Đăng xuất ====
           ListTile(
-            tileColor: const Color(0xFF1B1C1E),
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Đăng xuất', style: TextStyle(color: Colors.red)),
-            onTap: () {},
+            onTap: () {
+              ref.read(authProvider.notifier).logout();
+              context.go('/login');
+            },
           ),
         ],
       ),
     );
   }
 
+  // ✅ FIXED ITEM
   Widget _item({
     required IconData icon,
     required String text,
@@ -85,10 +85,7 @@ class AccountPage extends StatelessWidget {
     return ListTile(
       tileColor: const Color(0xFF1B1C1E),
       leading: Icon(icon, color: Colors.white70),
-      title: Text(
-        text,
-        style: const TextStyle(color: Colors.white),
-      ),
+      title: Text(text, style: const TextStyle(color: Colors.white)),
       trailing: const Icon(Icons.chevron_right, color: Colors.grey),
       onTap: onTap,
     );
