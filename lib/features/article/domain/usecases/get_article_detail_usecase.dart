@@ -1,5 +1,3 @@
-// lib/features/article/domain/usecases/get_article_detail_usecase.dart
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../entities/article_entity.dart';
 import '../repositories/article_repository.dart';

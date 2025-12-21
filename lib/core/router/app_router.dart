@@ -20,12 +20,13 @@ class AppRouter {
       GoRoute(path: '/register', builder: (c, s) => const RegisterPage()),
       GoRoute(path: '/article/:id', builder: (c, s) {
         final id = s.pathParameters['id']!;
-        // ✅ Sửa lỗi: Truyền giá trị vào tham số articleSlug
+        // Sửa lỗi: Truyền giá trị vào tham số articleSlug
         return ArticlePage(articleSlug: id);
       }),
       GoRoute(path: '/search', builder: (c, s) => const SearchPage()),
       GoRoute(path: '/comments/:articleId', builder: (c, s) {
-        final id = s.pathParameters['articleId']!;
+        final idString = s.pathParameters['articleId']!;
+        final int id = int.tryParse(idString) ?? 0;
         return CommentPage(articleId: id);
       }),
       GoRoute(path: '/chat', builder: (c, s) => const ChatPage()),
