@@ -622,9 +622,12 @@ class _TopAppBar extends StatelessWidget {
             tooltip: 'Test Login',
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.only(right: 8),
-          child: _CircleIcon(icon: Icons.notifications_none),
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: GestureDetector(
+            onTap: () => context.push('/notification'), // 🆕 chuyển sang trang thông báo
+            child: const _CircleIcon(icon: Icons.notifications_none),
+          ),
         ),
       ],
     );
