@@ -1,5 +1,3 @@
-// lib/features/article/presentation/notifier/article_detail_state.dart
-
 import '../../domain/entities/article_entity.dart';
 
 abstract class ArticleDetailState {
