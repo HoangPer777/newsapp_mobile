@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../article/presentation/widgets/article_page.dart';
 import '../model/article_notification.dart';
 import '../services/notification_service.dart';
 
@@ -79,6 +80,17 @@ class _NotificationPageState extends State<NotificationPage> {
                   style: const TextStyle(
                       color: Colors.white54, fontSize: 12),
                 ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ArticlePage(
+                        articleSlug: n.articleId.toString(), // Chuyển ID sang String cho slug
+                        article: null, // Truyền null để ép ArticlePage gọi API load chi tiết
+                      ),
+                    ),
+                  );
+                },
               );
             },
           );
@@ -86,4 +98,5 @@ class _NotificationPageState extends State<NotificationPage> {
       ),
     );
   }
+
 }
