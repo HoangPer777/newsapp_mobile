@@ -17,9 +17,14 @@ class AuthRepository {
       print('AuthRepository: Response received: ${response.statusCode}'); // DEBUG LOG
 
       final token = response.data['accessToken'];
+      final role = response.data['role']; // Lấy role từ Backend trả về
+
       if (token != null) {
         print('AuthRepository: Token found, saving...'); // DEBUG LOG
         await _storage.write(key: 'access_token', value: token);
+        if (role != null) {
+          await _storage.write(key: 'role', value: role); // Lưu role vào storage
+        }
       } else {
         print('AuthRepository: Token is null!'); // DEBUG LOG
       }

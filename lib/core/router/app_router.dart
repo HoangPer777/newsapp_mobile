@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/widgets.dart';
+import '../../features/article/presentation/widgets/add_article_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/register_page.dart';
@@ -16,6 +17,10 @@ class AppRouter {
     routes: [
       GoRoute(path: '/', builder: (c, s) => const HomePage()),
       GoRoute(path: '/login', builder: (c, s) => const LoginPage()),
+      GoRoute(
+        path: '/add-article',
+        builder: (context, state) => const AddArticlePage(),
+      ),
       GoRoute(path: '/register', builder: (c, s) => const RegisterPage()),
       GoRoute(path: '/article/:id', builder: (c, s) {
         final id = s.pathParameters['id']!;

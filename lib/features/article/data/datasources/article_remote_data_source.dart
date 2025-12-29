@@ -1,15 +1,21 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/di/providers.dart';
 import '../models/article_model.dart';
 
 abstract class ArticleRemoteDataSource {
   Future<List<ArticleModel>> getArticles();
   Future<ArticleModel> fetchArticleBySlug(String slug);
+
+  Future<void> createArticle(Map<String, dynamic> articleData);
 }
+
 
 class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
   final Dio dio;
+// Khởi tạo storage để đọc Token
+  final _storage = const FlutterSecureStorage();
 
   ArticleRemoteDataSourceImpl({required this.dio});
 
@@ -37,6 +43,28 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       return ArticleModel.fromJson(response.data);
     } catch (e) {
       throw Exception('Lỗi lấy chi tiết: $e');
+    }
+  }
+
+  // HÀM THÊM BÀI BÁO (ADMIN)
+  @override
+  Future<void> createArticle(Map<String, dynamic> articleData) async {
+    try {
+      // 1. Lấy token từ bộ nhớ bảo mật
+      String? token = await _storage.read(key: 'access_token');
+
+      // 2. Gửi request POST kèm Header Authorization
+      await dio.post(
+        '/api/articles',
+        data: articleData,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token', // Bắt buộc phải có để Spring Security xác thực
+          },
+        ),
+      );
+    } catch (e) {
+      throw Exception('Lỗi khi đăng bài báo: $e');
     }
   }
 }
