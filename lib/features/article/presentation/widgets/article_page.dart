@@ -8,6 +8,7 @@ import '../article_style.dart';
 import '../notifier/article_detail_notifier.dart';
 import '../notifier/article_detail_state.dart';
 import '../providers/article_list_provider.dart';
+import 'package:newsapp_mobile/features/chatbot/presentation/widgets/chatbot_widget.dart';
 
 class ArticlePage extends ConsumerStatefulWidget {
   final String articleSlug;
@@ -272,7 +273,18 @@ class _ArticlePageState extends ConsumerState<ArticlePage> {
             heroTag: 'chatbot',
             backgroundColor: primaryColor,
             child: const Icon(Icons.smart_toy_outlined, color: Colors.white),
-            onPressed: () {},
+            onPressed: () {
+               if (widget.article != null || int.tryParse(widget.articleSlug) != null) {
+                  final int idBaiViet = widget.article?.id ?? int.parse(widget.articleSlug);
+                  
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => ChatbotWidget(articleId: idBaiViet),
+                  );
+               }
+            },
           ),
 
           // Nút Comment (Mở BottomSheet)
