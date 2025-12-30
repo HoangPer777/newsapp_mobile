@@ -10,7 +10,7 @@ import '../../features/comment/presentation/comment_page.dart';
 import '../../features/menu/presentation/menu_page/menu_page.dart';
 import '../../features/menu/presentation/menu_page/account_page.dart';
 import '../../features/menu/presentation/menu_page/edit_profile.dart';
-
+import '../../features/notification/presentation/notification_page.dart';
 class AppRouter {
   GoRouter get router => GoRouter(
     routes: [
@@ -19,15 +19,19 @@ class AppRouter {
       GoRoute(path: '/register', builder: (c, s) => const RegisterPage()),
       GoRoute(path: '/article/:id', builder: (c, s) {
         final id = s.pathParameters['id']!;
-        // ✅ Sửa lỗi: Truyền giá trị vào tham số articleSlug
+        // Sửa lỗi: Truyền giá trị vào tham số articleSlug
         return ArticlePage(articleSlug: id);
       }),
       GoRoute(path: '/search', builder: (c, s) => const SearchPage()),
       GoRoute(path: '/comments/:articleId', builder: (c, s) {
-        final id = s.pathParameters['articleId']!;
+        final idString = s.pathParameters['articleId']!;
+        final int id = int.tryParse(idString) ?? 0;
         return CommentPage(articleId: id);
       }),
       GoRoute(path: '/chat', builder: (c, s) => const ChatPage()),
+      GoRoute(
+          path: '/notification',
+          builder: (c, s) => const NotificationPage()),
       GoRoute(
         path: '/menu',
         builder: (_, __) => const MenuPage(),
