@@ -4,7 +4,8 @@ class UserModel {
   final String? displayName;
   final String? phone;
   final String? gender;
-  final String? location;
+  final String? location; // Map từ 'address' của backend
+  final String? avatarUrl; // Thêm trường này
 
   UserModel({
     required this.id,
@@ -13,16 +14,18 @@ class UserModel {
     this.phone,
     this.gender,
     this.location,
+    this.avatarUrl,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'],
-      email: json['email'],
+      id: json['id'] ?? 0,
+      email: json['email'] ?? '',
       displayName: json['displayName'],
       phone: json['phoneNumber'],
       gender: json['gender'],
       location: json['address'],
+      avatarUrl: json['avatarUrl'],
     );
   }
 }

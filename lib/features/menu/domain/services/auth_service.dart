@@ -68,4 +68,28 @@ class AuthService {
 
     return UserModel.fromJson(jsonDecode(res.body));
   }
+  static Future<void> changePassword(
+      String token,
+      int uid,
+      String oldPassword,
+      String newPassword,
+      ) async {
+    final res = await http.post(
+      Uri.parse('$_baseUrl/change-password?uid=$uid'),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "oldPassword": oldPassword,
+        "newPassword": newPassword,
+      }),
+    );
+
+    if (res.statusCode != 200) {
+      // Parse lỗi từ backend nếu có, ví dụ: "Old password is incorrect"
+      final body = jsonDecode(res.body);
+      throw Exception(body['message'] ?? 'Đổi mật khẩu thất bại');
+    }
+  }
 }
