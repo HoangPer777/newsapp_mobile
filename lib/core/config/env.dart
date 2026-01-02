@@ -21,7 +21,7 @@ class Env {
 }
 
 // Dev Mode:
-// flutter run --dart-define=API_BASE=http://10.0.129.45:8080 --dart-define=CHATBOT_API_BASE=http://10.0.129.45:8000
+// flutter run --dart-define=API_BASE=http://10.0.70.228:8080 --dart-define=CHATBOT_API_BASE=http://10.0.70.228:8000
 //
 // Production:
 // flutter run --dart-define=API_BASE=http://146.190.87.167:8080 --dart-define=CHATBOT_API_BASE=http://146.190.87.167:8000
