@@ -27,6 +27,13 @@ class ArticleRepositoryImpl implements ArticleRepository {
     // Ánh xạ sang Domain Entity
     return articleModel.toEntity();
   }
+
+  //3. HÀM TÌM KIẾM
+  @override
+  Future<List<ArticleEntity>> searchArticles(String query) async {
+    final models = await remoteDataSource.searchArticles(query);
+    return models.map((model) => model.toEntity()).toList();
+  }
 }
 
 // PROVIDER

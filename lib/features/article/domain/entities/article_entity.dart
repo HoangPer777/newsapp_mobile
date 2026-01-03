@@ -9,6 +9,7 @@ class ArticleEntity {
   final String category;
   final String authorName;
   final String? imageUrl;
+  final double? matchScore; // [NEW] AI Match score (0.0 - 1.0)
 
   const ArticleEntity({
     required this.id,
@@ -18,6 +19,7 @@ class ArticleEntity {
     required this.category,
     required this.authorName,
     this.imageUrl,
+    this.matchScore,
   });
 
 }
