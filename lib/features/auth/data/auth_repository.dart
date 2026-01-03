@@ -1,23 +1,26 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../menu/data/models/user.dart'; // Đảm bảo đúng đường dẫn
-import '../../../../core/config/env.dart';
+import '../../../../core/api/dio_client.dart'; // Import DioClient
 
 class AuthRepository {
   // Định nghĩa storage để lưu token vào bộ nhớ máy
   final _storage = const FlutterSecureStorage();
+  late final Dio _dio;
 
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: '${Env.apiBase}/auth',
-    connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 10),
-  ));
+  // Constructor hỗ trợ Dependency Injection (tùy chọn)
+  // Nếu không truyền dio vào, sẽ dùng DioClient() mặc định (Singleton)
+  AuthRepository({Dio? dio}) {
+    _dio = dio ?? DioClient().dio;
+  }
 
   // 1. Đăng nhập
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
+      // Lưu ý: DioClient có baseUrl là Env.apiBase
+      // Nên ta cần thêm prefix /auth vào đường dẫn
       final response = await _dio.post(
-        '/login',
+        '/auth/login',
         data: {
           'email': email,
           'password': password,
@@ -35,6 +38,7 @@ class AuthRepository {
         throw Exception('Đăng nhập thất bại');
       }
     } on DioException catch (e) {
+      // DioClient đã có Interceptor xử lý lỗi, nhưng ta vẫn rethrow để UI bắt
       rethrow;
     }
   }
@@ -43,7 +47,7 @@ class AuthRepository {
   Future<UserModel> getMe(String token, int uid) async {
     try {
       final response = await _dio.get(
-        '/me',
+        '/auth/me',
         queryParameters: {'uid': uid},
         options: Options(
           headers: {'Authorization': 'Bearer $token'},
@@ -60,11 +64,10 @@ class AuthRepository {
     }
   }
 
-  // 3. Đăng ký (Đã sửa lỗi đường dẫn và storage)
+  // 3. Đăng ký
   Future<Map<String, dynamic>> register(String email, String password, String displayName) async {
     try {
-      // Vì baseUrl đã có /auth nên ở đây chỉ cần /register
-      final response = await _dio.post('/register', data: {
+      final response = await _dio.post('/auth/register', data: {
         'email': email,
         'password': password,
         'displayName': displayName,
