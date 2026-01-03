@@ -6,6 +6,7 @@ import '../models/article_model.dart';
 abstract class ArticleRemoteDataSource {
   Future<List<ArticleModel>> getArticles();
   Future<ArticleModel> fetchArticleBySlug(String slug);
+  Future<List<ArticleModel>> searchArticles(String query); // [NEW]
 }
 
 class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
@@ -37,6 +38,21 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       return ArticleModel.fromJson(response.data);
     } catch (e) {
       throw Exception('Lỗi lấy chi tiết: $e');
+    }
+  }
+
+  // [NEW] Search API call
+  @override
+  Future<List<ArticleModel>> searchArticles(String query) async {
+    try {
+      final response = await dio.get(
+        '/api/articles/search',
+        queryParameters: {'q': query},
+      );
+      final List<dynamic> contentList = response.data;
+      return contentList.map((item) => ArticleModel.fromJson(item)).toList();
+    } catch (e) {
+      throw Exception('Lỗi tìm kiếm: $e');
     }
   }
 }

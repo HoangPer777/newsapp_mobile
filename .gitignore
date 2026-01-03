@@ -69,3 +69,6 @@ node_modules/
 **/*.key
 **/*.crt
 **/*.p12
+
+# config
+lib/core/config/env.dart
