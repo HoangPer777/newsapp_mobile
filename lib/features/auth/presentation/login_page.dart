@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import '../../../core/di/providers.dart';
 import '../data/auth_repository.dart';
+import '../../menu/presentation/providers/auth_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget { // Đổi để dùng được Riverpod
+
   const LoginPage({super.key});
 
   @override
@@ -48,6 +50,29 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         if (e.response?.data is Map<String, dynamic>) {
           errorMessage = e.response?.data['message'] ?? errorMessage;
         }
+        // BƯỚC 1: Login lấy Token và UID
+        final loginData = await _authRepository.login(
+          _emailController.text,
+          _passwordController.text,
+        );
+
+        final String token = loginData['accessToken'];
+        final int userId = loginData['userId'];
+
+        // BƯỚC 2: Lấy Profile chi tiết
+        final userModel = await _authRepository.getMe(token, userId);
+
+        // BƯỚC 3: Cập nhật Provider toàn cục
+        ref.read(authProvider.notifier).setAuth(token, userModel);
+
+        if (mounted) {
+          context.go('/'); // Về trang chủ
+        }
+      } on DioException catch (e) {
+        String errorMessage = 'Đăng nhập thất bại';
+        if (e.response?.data is Map) {
+          errorMessage = e.response?.data['message'] ?? errorMessage;
+        }
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
@@ -57,6 +82,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         if (mounted) {
           setState(() => _isLoading = false);
         }
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
       }
     }
   }
@@ -76,7 +111,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
-        leadingWidth: 56,
         title: _buildLogo(),
         centerTitle: true,
         actions: [const SizedBox(width: 56)],
@@ -92,11 +126,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 const SizedBox(height: 32),
                 Center(child: _buildTitleWithLink()),
                 const SizedBox(height: 40),
-                const Text('Email', style: TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w500)),
+                const Text('Email', style: TextStyle(color: Colors.white, fontSize: 14)),
                 const SizedBox(height: 8),
                 _buildEmailField(),
                 const SizedBox(height: 24),
-                const Text('Mật khẩu', style: TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w500)),
+                const Text('Mật khẩu', style: TextStyle(color: Colors.white, fontSize: 14)),
                 const SizedBox(height: 8),
                 _buildPasswordField(),
                 const SizedBox(height: 32),
@@ -104,6 +138,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 const SizedBox(height: 24),
                 _buildSeparator(),
                 const SizedBox(height: 24),
+
                 _buildSocialLoginButton(
                   icon: Icons.phone_iphone,
                   label: 'Đăng nhập bằng Apple ID',
@@ -115,6 +150,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   label: 'Đăng nhập bằng Google',
                   onTap: () => _handleSocialLogin('Google'),
                 ),
+                _buildSocialLoginButtons(),
                 const SizedBox(height: 40),
                 _buildTermsText(),
                 const SizedBox(height: 24),
@@ -130,6 +166,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget _buildTitleWithLink() {
     return RichText(
       text: TextSpan(
+  Widget _buildLogo() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Image.asset('assets/images/logo_VNXnews.png', height: 26, width: 26, fit: BoxFit.cover),
+        ),
+        const SizedBox(width: 6),
+        const Text('Vnx news', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+      ],
+    );
+  }
+
+  Widget _buildTitleWithLink() {
+    return RichText(
+      text: TextSpan(
+        text: '', // SỬA LỖI: Thêm text rỗng ở đây
         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
         children: [
           const TextSpan(text: 'Đăng nhập / '),
@@ -168,6 +222,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           prefixIcon: Icon(Icons.email_outlined, color: Colors.white70),
           border: InputBorder.none,
           contentPadding: EdgeInsets.all(16),
+          contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         ),
         validator: (v) => (v == null || !v.contains('@')) ? 'Email không hợp lệ' : null,
       ),
@@ -182,7 +237,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         obscureText: _obscurePassword,
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
-          hintText: 'Nhập mật khẩu của bạn',
+          hintText: 'Nhập mật khẩu',
           hintStyle: const TextStyle(color: Colors.white54),
           prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
           suffixIcon: IconButton(
@@ -193,6 +248,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           contentPadding: const EdgeInsets.all(16),
         ),
         validator: (v) => (v == null || v.length < 6) ? 'Mật khẩu quá ngắn' : null,
+            icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: Colors.white70),
+            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        ),
+        validator: (v) => (v == null || v.length < 6) ? 'Mật khẩu tối thiểu 6 ký tự' : null,
       ),
     );
   }
@@ -204,6 +266,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         onPressed: _isLoading ? null : _handleContinue,
         style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFBB1819), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
         child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Tiếp tục', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+        child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Tiếp tục', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -223,11 +286,64 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         onPressed: onTap,
         style: OutlinedButton.styleFrom(backgroundColor: const Color(0xFF1E1E1E), side: BorderSide.none, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: Colors.white), const SizedBox(width: 12), Text(label, style: const TextStyle(color: Colors.white))]),
+=======
+    return Row(
+      children: [
+        Expanded(child: Divider(color: Colors.white12)),
+        const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('hoặc', style: TextStyle(color: Colors.white54))),
+        Expanded(child: Divider(color: Colors.white12)),
+      ],
+    );
+  }
+
+  Widget _buildSocialLoginButtons() {
+    return Column(
+      children: [
+        _socialButton(Icons.apple, 'Đăng nhập bằng Apple ID'),
+        const SizedBox(height: 12),
+        _socialButton(Icons.facebook, 'Đăng nhập bằng Facebook', color: const Color(0xFF1877F2)),
+      ],
+    );
+  }
+
+  Widget _socialButton(IconData icon, String label, {Color? color}) {
+    return OutlinedButton(
+      onPressed: () {},
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 52),
+        backgroundColor: const Color(0xFF1E1E1E),
+        side: BorderSide.none,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color ?? Colors.white),
+          const SizedBox(width: 12),
+          Text(label, style: const TextStyle(color: Colors.white)),
+        ],
+>>>>>>> a894ea0bbdad3a235128b06f194cb7a40ac1a71d
       ),
     );
   }
 
   Widget _buildTermsText() {
+<<<<<<< HEAD
     return const Text('Khi tiếp tục, bạn đồng ý với điều khoản sử dụng và chính sách bảo mật của VnExpress.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, fontSize: 12));
+=======
+    return RichText(
+      textAlign: TextAlign.center,
+      text: TextSpan(
+        text: 'Khi tiếp tục, bạn đồng ý với ', // SỬA LỖI: Thêm text ở đây
+        style: const TextStyle(color: Colors.white54, fontSize: 12, height: 1.5),
+        children: const [
+          TextSpan(text: 'điều khoản sử dụng', style: TextStyle(color: Colors.white, decoration: TextDecoration.underline)),
+          TextSpan(text: ' và '),
+          TextSpan(text: 'chính sách bảo mật', style: TextStyle(color: Colors.white, decoration: TextDecoration.underline)),
+          TextSpan(text: ' của VNX.'),
+        ],
+      ),
+    );
+>>>>>>> a894ea0bbdad3a235128b06f194cb7a40ac1a71d
   }
 }

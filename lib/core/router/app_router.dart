@@ -8,10 +8,10 @@ import '../../features/article/presentation/widgets/article_page.dart';
 import '../../features/chatbot/presentation/chat_page.dart';
 import '../../features/search/presentation/search_page.dart';
 import '../../features/comment/presentation/comment_page.dart';
-import '../../features/menu/presentation/menu_page.dart';
-import '../../features/menu/infor/account_page.dart';
-import '../../features/menu/infor/edit_profile.dart';
-
+import '../../features/menu/presentation/menu_page/menu_page.dart';
+import '../../features/menu/presentation/menu_page/account_page.dart';
+import '../../features/menu/presentation/menu_page/edit_profile.dart';
+import '../../features/notification/presentation/notification_page.dart';
 class AppRouter {
   GoRouter get router => GoRouter(
     routes: [
@@ -34,6 +34,9 @@ class AppRouter {
         return CommentPage(articleId: id);
       }),
       GoRoute(path: '/chat', builder: (c, s) => const ChatPage()),
+      GoRoute(
+          path: '/notification',
+          builder: (c, s) => const NotificationPage()),
       GoRoute(
         path: '/menu',
         builder: (_, __) => const MenuPage(),

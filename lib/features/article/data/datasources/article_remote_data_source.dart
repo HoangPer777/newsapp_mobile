@@ -9,11 +9,13 @@ abstract class ArticleRemoteDataSource {
   Future<ArticleModel> fetchArticleBySlug(String slug);
 
   Future<void> createArticle(Map<String, dynamic> articleData);
+  Future<List<ArticleModel>> searchArticles(String query); // [NEW]
 }
 
 
 class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
   final Dio dio;
+
 // Khởi tạo storage để đọc Token
   final _storage = const FlutterSecureStorage();
 
@@ -46,6 +48,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
     }
   }
 
+
   // HÀM THÊM BÀI BÁO (ADMIN)
   @override
   Future<void> createArticle(Map<String, dynamic> articleData) async {
@@ -59,7 +62,8 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
         data: articleData,
         options: Options(
           headers: {
-            'Authorization': 'Bearer $token', // Bắt buộc phải có để Spring Security xác thực
+            'Authorization': 'Bearer $token',
+            // Bắt buộc phải có để Spring Security xác thực
           },
         ),
       );
@@ -67,9 +71,27 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       throw Exception('Lỗi khi đăng bài báo: $e');
     }
   }
-}
 
-final articleRemoteDataSourceProvider = Provider<ArticleRemoteDataSource>((ref) {
-  final dio = ref.watch(dioProvider);
-  return ArticleRemoteDataSourceImpl(dio: dio);
-});
+  final articleRemoteDataSourceProvider = Provider<ArticleRemoteDataSource>((
+      ref) {
+    final dio = ref.watch(dioProvider);
+    return ArticleRemoteDataSourceImpl(dio: dio);
+  });
+
+  // [NEW] Search API call
+  @override
+  Future<List<ArticleModel>> searchArticles(String query) async {
+    try {
+      final response = await dio.get(
+        '/api/articles/search',
+        queryParameters: {'q': query},
+      );
+      final List<dynamic> contentList = response.data;
+      return contentList
+          .map((item) => ArticleModel.fromJson(item))
+          .toList();
+    } catch (e) {
+      throw Exception('Lỗi tìm kiếm: $e');
+    }
+  }
+}

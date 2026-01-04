@@ -217,6 +217,24 @@ class _TopAppBar extends StatelessWidget {
       actions: [
         IconButton(icon: const Icon(Icons.login, color: Colors.white70), onPressed: () => context.push('/login')),
         const Padding(padding: EdgeInsets.only(right: 8), child: _CircleIcon(icon: Icons.notifications_none)),
+        // Nút test đăng nhập (tạm thời)
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: IconButton(
+            icon: const Icon(Icons.login, color: Colors.white70),
+            onPressed: () {
+              context.push('/login');
+            },
+            tooltip: 'Test Login',
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: GestureDetector(
+            onTap: () => context.push('/notification'), // 🆕 chuyển sang trang thông báo
+            child: const _CircleIcon(icon: Icons.notifications_none),
+          ),
+        ),
       ],
     );
   }
