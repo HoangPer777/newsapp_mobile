@@ -7,7 +7,7 @@ class ChatbotService {
 
   // 1. Semantic Search
   Future<List<dynamic>> searchArticles(String query, {int limit = 5}) async {
-    final url = Uri.parse('$_baseUrl/search');
+    final url = Uri.parse('$_baseUrl/search/');
     try {
       final response = await http.post(
         url,

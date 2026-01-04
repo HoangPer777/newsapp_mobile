@@ -4,20 +4,20 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-// --- IMPORT CÁC FILE CẦN THIẾT ---
 import '../../../core/di/providers.dart';
+import '../../menu/presentation/providers/auth_provider.dart';
 import '../data/home_api.dart';
 import '../../article/presentation/providers/article_list_provider.dart';
 import '../../article/presentation/widgets/article_page.dart';
 import '../../article/domain/entities/article_entity.dart';
 
 /// Provider để kiểm tra quyền Admin từ bộ nhớ máy
-final userRoleProvider = FutureProvider<String?>((ref) async {
-  const storage = FlutterSecureStorage();
-  return await storage.read(key: 'role');
-});
+// final userRoleProvider = FutureProvider<String?>((ref) async {
+//   const storage = FlutterSecureStorage();
+//   return await storage.read(key: 'role');
+// });
 
-/// Health ping (Giữ nguyên của Han)
+/// Health ping
 final healthProvider = FutureProvider<String>((ref) async {
   final dio = ref.read(dioProvider);
   return HomeApi(dio).health();
@@ -28,9 +28,14 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Lắng nghe quyền của người dùng (ADMIN/USER)
-    final userRoleAsync = ref.watch(userRoleProvider);
-
+    // // Lắng nghe quyền của người dùng (ADMIN/USER)
+    // final userRoleAsync = ref.watch(userRoleProvider);
+// 1. THAY ĐỔI QUAN TRỌNG: Nghe trực tiếp từ authProvider
+    // Khi đăng nhập thành công bên kia, authProvider đổi state -> Widget này vẽ lại ngay lập tức
+    final authState = ref.watch(authProvider);
+    // 2. Kiểm tra quyền Admin từ biến authState (RAM) thay vì đọc ổ cứng
+    // Dùng .toUpperCase() để chắc chắn 'admin' hay 'ADMIN' đều nhận
+    final bool isAdmin = authState.user?.role?.toUpperCase() == 'ADMIN';
     final categories = const [
       'Trang chủ',
       'Mới nhất',
@@ -74,18 +79,26 @@ class HomePage extends ConsumerWidget {
             ),
           ),
 
-          // --- PHẦN MỚI: NÚT THÊM BÀI CHỈ HIỆN KHI LÀ ADMIN ---
-          floatingActionButton: userRoleAsync.when(
-            data: (role) => role == 'ADMIN'
-                ? FloatingActionButton(
-              backgroundColor: const Color(0xFFbb1819),
-              child: const Icon(Icons.add, color: Colors.white),
-              onPressed: () => context.push('/add-article'),
-            )
-                : null,
-            loading: () => null,
-            error: (_, __) => null,
-          ),
+          // ---NÚT THÊM BÀI CHỈ HIỆN KHI LÀ ADMIN ---
+          // floatingActionButton: userRoleAsync.when(
+          //   data: (role) => role == 'ADMIN'
+          //       ? FloatingActionButton(
+          //     backgroundColor: const Color(0xFFbb1819),
+          //     child: const Icon(Icons.add, color: Colors.white),
+          //     onPressed: () => context.push('/add-article'),
+          //   )
+          //       : null,
+          //   loading: () => null,
+          //   error: (_, __) => null,
+          // ),
+          // Dùng biến isAdmin đã tính ở trên, cực nhanh và mượt
+          floatingActionButton: isAdmin
+              ? FloatingActionButton(
+            backgroundColor: const Color(0xFFbb1819),
+            child: const Icon(Icons.add, color: Colors.white),
+            onPressed: () => context.push('/add-article'), // Đảm bảo route này đúng trong router của Han
+          )
+              : null, // Nếu không phải admin thì ẩn luôn
 
           bottomNavigationBar: _BottomNav(
             onTap: (i) {
@@ -195,7 +208,7 @@ class _ArticleItem extends StatelessWidget {
   }
 }
 
-// --- APP BAR VÀ CÁC WIDGET PHỤ GIAO DIỆN (Gốc của Han) ---
+// --- APP BAR VÀ CÁC WIDGET PHỤ GIAO DIỆN  ---
 
 class _TopAppBar extends StatelessWidget {
   @override
@@ -215,19 +228,23 @@ class _TopAppBar extends StatelessWidget {
         ],
       ),
       actions: [
-        IconButton(icon: const Icon(Icons.login, color: Colors.white70), onPressed: () => context.push('/login')),
-        const Padding(padding: EdgeInsets.only(right: 8), child: _CircleIcon(icon: Icons.notifications_none)),
-        // Nút test đăng nhập (tạm thời)
-        Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: IconButton(
-            icon: const Icon(Icons.login, color: Colors.white70),
-            onPressed: () {
-              context.push('/login');
-            },
-            tooltip: 'Test Login',
-          ),
-        ),
+        // 1. NÚT LOGIN: Chỉ hiện khi CHƯA đăng nhập (!isLoggedIn)
+        IconButton(icon: const Icon(Icons.login, color: Colors.white70),
+            tooltip: 'Đăng nhập',
+            onPressed: () => context.push('/login')),
+        // const Padding(padding: EdgeInsets.only(right: 8),
+        //     child: _CircleIcon(icon: Icons.notifications_none)),
+        // // Nút test đăng nhập (tạm thời)
+        // Padding(
+        //   padding: const EdgeInsets.only(right: 8),
+        //   child: IconButton(
+        //     icon: const Icon(Icons.login, color: Colors.white70),
+        //     onPressed: () {
+        //       context.push('/login');
+        //     },
+        //     tooltip: 'Test Login',
+        //   ),
+        // ),
         Padding(
           padding: const EdgeInsets.only(right: 8),
           child: GestureDetector(

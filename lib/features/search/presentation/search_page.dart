@@ -28,11 +28,80 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   String? _error;
   bool _hasSearched = false;
 
+  // void _doSearch() async {
+  //   final query = _controller.text.trim();
+  //   if (query.isEmpty) return;
+  //
+  //   // Reset state
+  //   setState(() {
+  //     _isLoading = true;
+  //     _error = null;
+  //     _backendResults = [];
+  //     _chatbotResults = [];
+  //     _hasSearched = true;
+  //   });
+  //
+  //   try {
+  //     // 1. Gọi song song 2 API
+  //     final backendFuture =
+  //         ref.read(articleRepositoryProvider).searchArticles(query);
+  //     final chatbotFuture = _chatbotService.searchArticles(query);
+  //
+  //     // Chạy chờ cả 2 cùng xong (Future.wait)
+  //     // Lưu ý: Nếu 1 cái lỗi, cái kia vẫn chạy nếu handle try/catch riêng.
+  //     // Ở đây dùng Future.wait đơn giản, nếu 1 cái lỗi sẽ nhảy xuống catch chung.
+  //     // Để robust hơn nên soft-fail, nhưng tạm thời làm đơn giản.
+  //     final results = await Future.wait([
+  //       backendFuture,
+  //       chatbotFuture,
+  //     ]);
+  //
+  //     // 2. Xử lý kết quả Backend
+  //     final backendList = results[0] as List<ArticleEntity>;
+  //
+  //     // 3. Xử lý kết quả Chatbot (List<dynamic> -> List<ArticleEntity>)
+  //     final chatbotRaw = results[1] as List<dynamic>;
+  //     final chatbotList = chatbotRaw.where((item) => (item['score'] ?? 0) > 0.50).map((item) {
+  //       final rawDate =
+  //           item['published_at'] ?? DateTime.now().toIso8601String();
+  //       final DateTime pubDate = DateTime.tryParse(rawDate) ?? DateTime.now();
+  //
+  //       return ArticleEntity(
+  //         id: item['article_id'],
+  //         title: item['title'] ?? 'Gợi ý từ AI',
+  //         content: item['chunk_text'] ?? '',
+  //         publishedAt: pubDate,
+  //         category: item['category'] ?? 'AI Gợi ý',
+  //         authorName: item['author_name'] ?? 'AI Bot',
+  //         imageUrl: item['image_url'],
+  //         matchScore: item['score'],
+  //       );
+  //     }).toList();
+  //
+  //     if (mounted) {
+  //       setState(() {
+  //         _backendResults = backendList;
+  //         _chatbotResults = chatbotList.cast<ArticleEntity>();
+  //       });
+  //     }
+  //   } catch (e) {
+  //     if (mounted) {
+  //       setState(() {
+  //         _error = e.toString();
+  //       });
+  //     }
+  //   } finally {
+  //     if (mounted) {
+  //       setState(() {
+  //         _isLoading = false;
+  //       });
+  //     }
+  //   }
+  // }
   void _doSearch() async {
     final query = _controller.text.trim();
     if (query.isEmpty) return;
 
-    // Reset state
     setState(() {
       _isLoading = true;
       _error = null;
@@ -41,29 +110,25 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       _hasSearched = true;
     });
 
+    // Khai báo biến đệm
+    List<ArticleEntity> tempBackend = [];
+    List<ArticleEntity> tempChatbot = [];
+    String? tempError;
+
+    // 1. Gọi Backend (Bọc try-catch riêng)
     try {
-      // 1. Gọi song song 2 API
-      final backendFuture =
-          ref.read(articleRepositoryProvider).searchArticles(query);
-      final chatbotFuture = _chatbotService.searchArticles(query);
+      tempBackend = await ref.read(articleRepositoryProvider).searchArticles(query);
+    } catch (e) {
+      print("⚠️ Lỗi Backend: $e");
+      tempError = "Lỗi kết nối Backend"; // Chỉ lưu lỗi nếu cần
+    }
 
-      // Chạy chờ cả 2 cùng xong (Future.wait)
-      // Lưu ý: Nếu 1 cái lỗi, cái kia vẫn chạy nếu handle try/catch riêng.
-      // Ở đây dùng Future.wait đơn giản, nếu 1 cái lỗi sẽ nhảy xuống catch chung.
-      // Để robust hơn nên soft-fail, nhưng tạm thời làm đơn giản.
-      final results = await Future.wait([
-        backendFuture,
-        chatbotFuture,
-      ]);
-
-      // 2. Xử lý kết quả Backend
-      final backendList = results[0] as List<ArticleEntity>;
-
-      // 3. Xử lý kết quả Chatbot (List<dynamic> -> List<ArticleEntity>)
-      final chatbotRaw = results[1] as List<dynamic>;
-      final chatbotList = chatbotRaw.where((item) => (item['score'] ?? 0) > 0.50).map((item) {
-        final rawDate =
-            item['published_at'] ?? DateTime.now().toIso8601String();
+    // 2. Gọi Chatbot AI (Bọc try-catch riêng)
+    try {
+      final chatbotRaw = await _chatbotService.searchArticles(query);
+      // Logic map dữ liệu giữ nguyên như Han viết
+      tempChatbot = (chatbotRaw as List).where((item) => (item['score'] ?? 0) > 0.50).map((item) {
+        final rawDate = item['published_at'] ?? DateTime.now().toIso8601String();
         final DateTime pubDate = DateTime.tryParse(rawDate) ?? DateTime.now();
 
         return ArticleEntity(
@@ -76,26 +141,23 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           imageUrl: item['image_url'],
           matchScore: item['score'],
         );
-      }).toList();
-
-      if (mounted) {
-        setState(() {
-          _backendResults = backendList;
-          _chatbotResults = chatbotList.cast<ArticleEntity>();
-        });
-      }
+      }).toList().cast<ArticleEntity>();
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      print("⚠️ Lỗi AI (Có thể do chưa bật Python): $e");
+      // Không gán tempError, để người dùng vẫn xem được kết quả từ Backend
+    }
+
+    // 3. Cập nhật UI
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        _backendResults = tempBackend;
+        _chatbotResults = tempChatbot;
+        // Chỉ hiện lỗi nếu cả 2 đều rỗng và có lỗi
+        if (tempBackend.isEmpty && tempChatbot.isEmpty && tempError != null) {
+          _error = tempError;
+        }
+      });
     }
   }
 
@@ -244,20 +306,51 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Image
+            // ClipRRect(
+            //   borderRadius: BorderRadius.circular(8),
+            //   child: Image.network(
+            //     entity.imageUrl ?? "https://via.placeholder.com/150",
+            //     width: 110,
+            //     height: 80,
+            //     fit: BoxFit.cover,
+            //     errorBuilder: (_, __, ___) => Container(
+            //       width: 110,
+            //       height: 80,
+            //       color: const Color(0xFF2A2C30),
+            //       child: const Icon(Icons.image_not_supported,
+            //           color: Colors.grey),
+            //     ),
+            //   ),
+            // ),
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                entity.imageUrl ?? "https://via.placeholder.com/150",
-                width: 110,
-                height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 110,
-                  height: 80,
-                  color: const Color(0xFF2A2C30),
-                  child: const Icon(Icons.image_not_supported,
-                      color: Colors.grey),
-                ),
+              child: Builder(
+                builder: (context) {
+                  // 1. Kiểm tra link ảnh có hợp lệ không (Phải bắt đầu bằng http)
+                  String? imgUrl = entity.imageUrl;
+                  bool isValidUrl = imgUrl != null && (imgUrl.startsWith('http') || imgUrl.startsWith('https'));
+
+                  // 2. Nếu link rác ("a", "b", "c"...) -> Hiện ảnh lỗi luôn
+                  if (!isValidUrl) {
+                    return Container(
+                      width: 110, height: 80,
+                      color: const Color(0xFF2A2C30),
+                      child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                    );
+                  }
+
+                  // 3. Nếu link xịn -> Mới dùng Image.network
+                  return Image.network(
+                    imgUrl!,
+                    width: 110, height: 80,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 110, height: 80,
+                      color: const Color(0xFF2A2C30),
+                      child: const Icon(Icons.broken_image, color: Colors.grey),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 12),
@@ -327,7 +420,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                               borderRadius: BorderRadius.circular(4),
                               ),
                           child: Text(
-                             (entity.category.isNotEmpty ? entity.category : 'Tin tức').toUpperCase(),
+                             // (entity.category.isNotEmpty ? entity.category : 'Tin tức').toUpperCase(),
+                            (entity.category != null && entity.category!.isNotEmpty ? entity.category! : 'Tin tức').toUpperCase(),
                             style: const TextStyle(
                                 color: Color(0xFFbb1819),
                                 fontSize: 10,
@@ -339,7 +433,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                       
                       Expanded(
                         child: Text(
-                          "${entity.authorName} • ${DateFormat('dd/MM').format(entity.publishedAt)}",
+                          // "${entity.authorName} • ${DateFormat('dd/MM').format(entity.publishedAt)}",
+                          "${entity.authorName} • ${DateFormat('dd/MM').format(entity.publishedAt ?? DateTime.now())}",
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                               color: Colors.grey, fontSize: 11),
