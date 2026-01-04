@@ -42,7 +42,7 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
       if (citations.isNotEmpty) {
         String firstCitation = citations[0].toString();
         if (firstCitation.contains("article_id:")) {
-          linkedId = firstCitation.split(":")[1]; // Lấy số 33 ra
+          linkedId = firstCitation.split(":")[1].trim(); // Lấy số 33 ra
         }
       }
 
@@ -106,6 +106,18 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
                 final isUser = msg['role'] == 'user';
                 final hasLink = msg['article_id'] != null && msg['article_id']!.isNotEmpty;
 
+                // ĐIỀU KIỆN
+                // Lấy nội dung chữ ra một biến String trước
+                final String botText = msg['text'] ?? "";
+                final String articleId = msg['article_id'] ?? "";
+
+                // Thực hiện kiểm tra trên biến String (botText)
+                final bool shouldShowLink = !isUser &&
+                    articleId.isNotEmpty &&
+                    !botText.contains("Lỗi AI") && // Thêm để chặn lỗi 429
+                    !botText.contains("429") &&
+                    !botText.toLowerCase().contains("không tìm thấy");
+
                 return Align(
                   alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: Column(
@@ -118,31 +130,49 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
                           color: isUser ? const Color(0xFFbb1819) : const Color(0xFF2A2C30),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Text(msg['text']!, style: const TextStyle(color: Colors.white)),
+                        // child: Text(msg['text']!, style: const TextStyle(color: Colors.white)),
+                        child: Text(botText, style: const TextStyle(color: Colors.white)),
                       ),
                       // Hiển thị nút "Xem bài báo" nếu có article_id
-                      if (!isUser && hasLink)
+                      // if (!isUser && hasLink)
+                      if (shouldShowLink)
                         Padding(
                           padding: const EdgeInsets.only(left: 4, bottom: 8),
                           child: InkWell(
                             onTap: () {
-                              if (msg['article_id'] != null && msg['article_id']!.isNotEmpty) {
-                                // 1. Lấy ID bài báo từ tin nhắn chatbot
-                                final String id = msg['article_id']!;
+                              // if (msg['article_id'] != null && msg['article_id']!.isNotEmpty) {
+                              //   // 1. Lấy ID bài báo từ tin nhắn chatbot
+                              //   final String id = msg['article_id']!;
+                              //
+                              //   // 2. Vì ArticlePage của Han yêu cầu 'articleSlug',
+                              //   // Han hãy dùng chính cái ID này truyền vào tham số articleSlug.
+                              //   // (Trong hệ thống của Han, slug và id có thể dùng thay thế cho nhau ở bước điều hướng)
+                              //
+                              //   Navigator.push(
+                              //     context,
+                              //     MaterialPageRoute(
+                              //       builder: (context) => ArticlePage(
+                              //         articleSlug: id, // Han truyền ID vào đây nhé
+                              //       ),
+                              //     ),
+                              //   );
+                              // }
+                              // 1. Kiểm tra xem AI có tìm thấy bài báo nào khác không (msg['article_id'])
+                              // 2. Nếu có, đi tới bài đó. Nếu không, mới dùng bài hiện tại (widget.articleId)
+                              final String destinationId = (msg['article_id'] != null && msg['article_id']!.isNotEmpty)
+                                  ? msg['article_id']!
+                                  : widget.articleId.toString();
 
-                                // 2. Vì ArticlePage của Han yêu cầu 'articleSlug',
-                                // Han hãy dùng chính cái ID này truyền vào tham số articleSlug.
-                                // (Trong hệ thống của Han, slug và id có thể dùng thay thế cho nhau ở bước điều hướng)
+                              print("Navigating to Article ID: $destinationId"); // Để Han theo dõi log
 
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ArticlePage(
-                                      articleSlug: id, // Han truyền ID vào đây nhé
-                                    ),
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ArticlePage(
+                                    articleSlug: destinationId,
                                   ),
-                                );
-                              }
+                                ),
+                              );
                             },
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
