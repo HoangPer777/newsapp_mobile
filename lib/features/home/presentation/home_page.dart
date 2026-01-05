@@ -268,17 +268,6 @@ class _TopAppBar extends StatelessWidget {
         ],
       ),
       actions: [
-        // Nút test đăng nhập (tạm thời)
-        Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: IconButton(
-            icon: const Icon(Icons.login, color: Colors.white70),
-            onPressed: () {
-              context.push('/login');
-            },
-            tooltip: 'Test Login',
-          ),
-        ),
         Padding(
           padding: const EdgeInsets.only(right: 8),
           child: GestureDetector(
