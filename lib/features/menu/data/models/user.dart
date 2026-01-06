@@ -6,6 +6,7 @@ class UserModel {
   final String? gender;
   final String? location; // Map từ 'address' của backend
   final String? avatarUrl; // Thêm trường này
+  final String? role;
 
   UserModel({
     required this.id,
@@ -15,6 +16,7 @@ class UserModel {
     this.gender,
     this.location,
     this.avatarUrl,
+    this.role,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,8 @@ class UserModel {
       gender: json['gender'],
       location: json['address'],
       avatarUrl: json['avatarUrl'],
+      role: json['role']?.toString(),
     );
   }
+
 }
