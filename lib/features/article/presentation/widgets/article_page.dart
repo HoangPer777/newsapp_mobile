@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../comment/presentation/comment_page.dart';
 import '../../domain/entities/article_entity.dart';
@@ -25,13 +26,13 @@ class ArticlePage extends ConsumerStatefulWidget {
 }
 
 class _ArticlePageState extends ConsumerState<ArticlePage> {
-  // Ảnh mặc định
+  // Ảnh mặc định nếu bài báo không có ảnh
   static const String defaultImage = "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&q=80";
 
   @override
   void initState() {
     super.initState();
-    // Nếu không có dữ liệu truyền sang thì mới gọi API tải lại
+    // Nếu không có dữ liệu truyền sang thì mới gọi API tải chi tiết
     if (widget.article == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(articleDetailNotifierProvider.notifier).loadArticle(widget.articleSlug);
@@ -41,17 +42,17 @@ class _ArticlePageState extends ConsumerState<ArticlePage> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Lấy trạng thái bài viết chi tiết (để hiển thị nội dung chính)
+    // 1. Lấy trạng thái chi tiết bài viết
     final state = ref.watch(articleDetailNotifierProvider);
 
-    // 2. LẤY DANH SÁCH TIN KHÁC TỪ PROVIDER
+    // 2. Lấy danh sách tin tức khác để hiển thị ở dưới
     final relatedState = ref.watch(articleListProvider);
 
     ArticleEntity? displayArticle = widget.article;
     bool isLoading = false;
     String? errorMsg;
 
-    // Logic ưu tiên dữ liệu mới nhất
+    // Logic cập nhật dữ liệu từ Notifier
     if (state is ArticleDetailLoaded) {
       displayArticle = state.article;
     } else if (widget.article == null && state is ArticleDetailLoading) {
@@ -62,51 +63,38 @@ class _ArticlePageState extends ConsumerState<ArticlePage> {
 
     // XỬ LÝ LỌC TIN LIÊN QUAN
     List<ArticleEntity> relatedArticles = [];
+    relatedState.when(
+      data: (articles) => relatedArticles = articles,
+      error: (_, __) => relatedArticles = [],
+      loading: () => relatedArticles = [],
+    );
 
-    if (relatedState is AsyncData<List<ArticleEntity>>) {
-      // Trường hợp 1: Provider trả về AsyncValue (thường gặp)
-      relatedArticles = relatedState.value;
-    } else if (relatedState is List<ArticleEntity>) {
-      // Trường hợp 2: Provider trả về List trực tiếp
-      relatedArticles = relatedState as List<ArticleEntity>;
-    } else {
-      // Trường hợp 3: Provider trả về State Class (ArticleListLoaded...)
-      try {
-        final dynamic dynamicState = relatedState;
-        if (dynamicState.articles is List<ArticleEntity>) {
-          relatedArticles = dynamicState.articles;
-        }
-      } catch (e) {
-      }
-    }
-
-    // Lọc: Bỏ bài đang đọc & lấy 5 bài đầu
+    // Lọc: Bỏ bài đang đọc & lấy tối đa 5 bài
     if (displayArticle != null && relatedArticles.isNotEmpty) {
       relatedArticles = relatedArticles
-          .where((item) => item.id != displayArticle!.id)
+          .where((item) => item.id != null && item.id != displayArticle?.id)
           .take(5)
           .toList();
     }
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      // Dùng CustomScrollView cho hiệu ứng cuộn đẹp
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             pinned: true,
-            title: const Text('Bài báo chi tiết'),
+            title: const Text('Chi tiết bài báo'),
+            backgroundColor: const Color(0xFF111214),
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => context.pop(),
             ),
           ),
           SliverToBoxAdapter(
             child: _buildBody(context, displayArticle, isLoading, errorMsg),
           ),
 
-          // DANH SÁCH TIN TỨC KHÁC
-          // 3. Tiêu đề "TIN TỨC KHÁC"
+          // TIÊU ĐỀ TIN TỨC KHÁC
           if (displayArticle != null && relatedArticles.isNotEmpty)
             SliverToBoxAdapter(
               child: Padding(
@@ -130,28 +118,26 @@ class _ArticlePageState extends ConsumerState<ArticlePage> {
               ),
             ),
 
-          // 4. Danh sách bài viết (SliverList)
+          // DANH SÁCH TIN TỨC KHÁC (SliverList)
           if (displayArticle != null && relatedArticles.isNotEmpty)
             SliverList(
               delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                  return _ArticleItem(article: relatedArticles[index]);
-                },
+                    (context, index) => _ArticleItem(article: relatedArticles[index]),
                 childCount: relatedArticles.length,
               ),
             ),
 
-          // Khoảng trắng dưới cùng để không bị nút nổi che mất
-          const SliverToBoxAdapter(child: SizedBox(height: 80)),
-
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
-      // Thanh công cụ nổi
-      bottomNavigationBar: _buildFloatingNavigationBar(context),
+      // Thanh điều hướng nổi ở dưới
+      bottomNavigationBar: displayArticle != null
+          ? _buildFloatingNavigationBar(context, displayArticle)
+          : null,
     );
   }
 
-  // --- Widget Nội Dung ---
+  // --- Widget Nội Dung Chính ---
   Widget _buildBody(BuildContext context, ArticleEntity? article, bool isLoading, String? error) {
     if (isLoading) {
       return const SizedBox(height: 400, child: Center(child: CircularProgressIndicator()));
@@ -160,18 +146,21 @@ class _ArticlePageState extends ConsumerState<ArticlePage> {
     if (error != null) {
       return SizedBox(
         height: 400,
-        child: Center(child: Text('Lỗi: $error', style: TextStyle(color: Theme.of(context).primaryColor))),
+        child: Center(child: Text('Lỗi: $error', style: const TextStyle(color: Colors.red))),
       );
     }
 
     if (article != null) {
       final dateFormatter = DateFormat('dd/MM/yyyy HH:mm');
 
-      final String imageUrl = (article.imageUrl != null && article.imageUrl!.isNotEmpty)
-          ? article.imageUrl!
-          : defaultImage;
+      // Xử lý Null Safety cho từng trường
+      final String title = article.title;
+      final String content = article.content;
+      final String category = (article.category == null || article.category!.isEmpty) ? 'TIN TỨC' : article.category!;
+      final String author = article.authorName ?? 'Admin';
+      final String imageUrl = (article.imageUrl != null && article.imageUrl!.isNotEmpty) ? article.imageUrl! : defaultImage;
+      final String publishedDate = article.publishedAt != null ? dateFormatter.format(article.publishedAt!) : 'Vừa xong';
 
-      print('DEBUG LOG: Category là: ${article.category}');
       return Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -185,32 +174,17 @@ class _ArticlePageState extends ConsumerState<ArticlePage> {
                 width: double.infinity,
                 height: 250,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Image.network(
-                  defaultImage,
-                  width: double.infinity,
-                  height: 250,
-                  fit: BoxFit.cover,
-                ),
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    height: 250,
-                    color: Colors.grey[900],
-                    child: const Center(child: CircularProgressIndicator()),
-                  );
-                },
+                errorBuilder: (context, error, stackTrace) => Image.network(defaultImage, fit: BoxFit.cover),
               ),
             ),
             const SizedBox(height: 20),
 
-            Text(
-              (article.category.isEmpty ? 'TIN TỨC' : article.category).toUpperCase(),
-              style: articleCategoryStyle,
-            ),
+            // Chuyên mục
+            Text(category.toUpperCase(), style: articleCategoryStyle),
             const SizedBox(height: 8),
 
             // Tiêu đề
-            Text(article.title, style: Theme.of(context).textTheme.headlineMedium),
+            Text(title, style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
 
             // Metadata (Tác giả, Ngày)
@@ -220,16 +194,16 @@ class _ArticlePageState extends ConsumerState<ArticlePage> {
                   radius: 16,
                   backgroundColor: Theme.of(context).primaryColor,
                   child: Text(
-                      article.authorName.isNotEmpty ? article.authorName[0] : 'A',
-                      style: const TextStyle(color: Colors.white)
+                    author.isNotEmpty ? author[0].toUpperCase() : 'A',
+                    style: const TextStyle(color: Colors.white),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(article.authorName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    Text(dateFormatter.format(article.publishedAt), style: articleMetadataStyle),
+                    Text(author, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text(publishedDate, style: articleMetadataStyle),
                   ],
                 ),
               ],
@@ -238,8 +212,8 @@ class _ArticlePageState extends ConsumerState<ArticlePage> {
 
             // Nội dung bài viết
             Text(
-              article.content,
-              style: Theme.of(context).textTheme.bodyLarge,
+              content,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white70, height: 1.6),
               textAlign: TextAlign.justify,
             ),
           ],
@@ -249,10 +223,11 @@ class _ArticlePageState extends ConsumerState<ArticlePage> {
     return const SizedBox.shrink();
   }
 
-  // --- Widget Thanh Nổi ---
-  Widget _buildFloatingNavigationBar(BuildContext context) {
-    final surfaceColor = Theme.of(context).colorScheme.surface;
-    final primaryColor = Theme.of(context).primaryColor;
+  // --- Thanh Công Cụ Nổi ---
+  Widget _buildFloatingNavigationBar(BuildContext context, ArticleEntity article) {
+    final surfaceColor = const Color(0xFF1E1E1E);
+    final primaryColor = const Color(0xFFBB1819);
+    final int articleId = article.id ?? 0;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 30),
@@ -261,83 +236,75 @@ class _ArticlePageState extends ConsumerState<ArticlePage> {
       decoration: BoxDecoration(
         color: surfaceColor.withOpacity(0.95),
         borderRadius: BorderRadius.circular(30),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 15, offset: const Offset(0, 5))],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(icon: const Icon(Icons.arrow_back), color: primaryColor, onPressed: () => Navigator.pop(context)),
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => context.pop(),
+          ),
 
           // Nút Chatbot AI
           FloatingActionButton.small(
-            heroTag: 'chatbot',
+            heroTag: 'chatbot_detail',
             backgroundColor: primaryColor,
             child: const Icon(Icons.smart_toy_outlined, color: Colors.white),
             onPressed: () {
-               if (widget.article != null || int.tryParse(widget.articleSlug) != null) {
-                  final int idBaiViet = widget.article?.id ?? int.parse(widget.articleSlug);
-                  
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (context) => ChatbotWidget(articleId: idBaiViet),
-                  );
-               }
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => ChatbotWidget(articleId: articleId),
+              );
             },
           ),
 
-          // Nút Comment (Mở BottomSheet)
+          // Nút Comment
           IconButton(
-              icon: const Icon(Icons.chat_bubble_outline),
-              color: Colors.white70,
+              icon: const Icon(Icons.chat_bubble_outline, color: Colors.white70),
               onPressed: () {
-                if (widget.article != null || int.tryParse(widget.articleSlug) != null) {
-                  // Xác định ID bài viết
-                  final int idBaiViet = widget.article?.id ?? int.parse(widget.articleSlug);
-
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true, // Để kéo lên cao được
-                    useSafeArea: true,        // Tránh bị đè lên thanh status bar
-                    backgroundColor: Colors.transparent,
-                    builder: (context) => CommentPage(
-                      articleId: idBaiViet, // Truyền ID (số) vào đây
-                      currentUserId: 1,     // Tạm thời để cứng là 1, sau này lấy từ UserProvider
-                    ),
-                  );
-                }
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => CommentPage(
+                    articleId: articleId,
+                    currentUserId: 1, // Han thay bằng Provider User thực tế nhé
+                  ),
+                );
               }
           ),
+
           // Nút Bookmark
-          IconButton(icon: const Icon(Icons.bookmark_border), color: Colors.white70, onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.bookmark_border, color: Colors.white70),
+            onPressed: () {},
+          ),
         ],
       ),
     );
   }
 }
 
-// WIDGET ITEM BÀI BÁO
+// WIDGET ITEM BÀI BÁO LIÊN QUAN
 class _ArticleItem extends StatelessWidget {
   final ArticleEntity article;
-
   const _ArticleItem({required this.article});
 
   @override
   Widget build(BuildContext context) {
+    final String author = article.authorName ?? 'Admin';
+    final String category = (article.category == null || article.category!.isEmpty) ? 'Tin tức' : article.category!;
+    final String dateStr = article.publishedAt != null ? DateFormat('dd/MM').format(article.publishedAt!) : '--/--';
+    final String imageUrl = (article.imageUrl != null && article.imageUrl!.isNotEmpty) ? article.imageUrl! : "https://via.placeholder.com/150";
+
     return InkWell(
-      // Sự kiện bấm vào bài báo -> Mở trang chi tiết mới
       onTap: () {
-        // Dùng push để chồng lên trang cũ
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ArticlePage(
-              article: article,
-              articleSlug: article.id.toString(),
-            ),
-          ),
-        );
+        // Mở trang bài báo mới
+        context.push('/article/${article.id ?? article.title}');
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -348,76 +315,42 @@ class _ArticleItem extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.network(
-                article.imageUrl ?? "https://via.placeholder.com/150",
+                imageUrl,
                 width: 110,
                 height: 80,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 110,
-                  height: 80,
-                  color: const Color(0xFF2A2C30),
-                  child: const Icon(Icons.image_not_supported, color: Colors.grey),
-                ),
+                errorBuilder: (_, __, ___) => Container(width: 110, height: 80, color: Colors.grey[900], child: const Icon(Icons.image_not_supported)),
               ),
             ),
             const SizedBox(width: 12),
 
-            // Thông tin
+            // Thông tin bài viết
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Tiêu đề
                   Text(
                     article.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      height: 1.3,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                   const SizedBox(height: 8),
-
-                  // Metadata (Category - Tác giả - Thời gian)
                   Row(
                     children: [
-                      // Tag Category
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFbb1819).withOpacity(0.2),
+                          color: const Color(0xFFBB1819).withOpacity(0.2),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(
-                          (article.category.isNotEmpty ? article.category : 'Tin tức').toUpperCase(),
-                          style: const TextStyle(
-                              color: Color(0xFFbb1819),
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold
-                          ),
-                        ),
+                        child: Text(category.toUpperCase(), style: const TextStyle(color: Color(0xFFBB1819), fontSize: 10, fontWeight: FontWeight.bold)),
                       ),
                       const SizedBox(width: 8),
-
-                      // Tác giả
-                      Expanded(
-                        child: Text(
-                          article.authorName,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.grey, fontSize: 11),
-                        ),
-                      ),
-
-                      // Thời gian
+                      Expanded(child: Text(author, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey, fontSize: 11))),
                       const Icon(Icons.access_time, size: 12, color: Colors.grey),
                       const SizedBox(width: 4),
-                      Text(
-                        DateFormat('dd/MM').format(article.publishedAt),
-                        style: const TextStyle(color: Colors.grey, fontSize: 11),
-                      ),
+                      Text(dateStr, style: const TextStyle(color: Colors.grey, fontSize: 11)),
                     ],
                   )
                 ],

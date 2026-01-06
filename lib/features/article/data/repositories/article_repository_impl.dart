@@ -28,6 +28,21 @@ class ArticleRepositoryImpl implements ArticleRepository {
     return articleModel.toEntity();
   }
 
+  @override
+  Future<void> createArticle(ArticleEntity article) async {
+    try {
+      // Chuyển Entity sang Map (JSON) rồi đưa cho DataSource xử lý
+      await remoteDataSource.createArticle(article.toJson());
+    } catch (e) {
+      rethrow;
+    }
+  }
+  // @override
+  // Future<void> createArticle(ArticleEntity article) async {
+  //   // Chuyển Entity sang Model trước khi gửi cho DataSource
+  //   final model = ArticleModel.fromEntity(article);
+  //   await remoteDataSource.createArticle(model.toJson());
+  // }
   //3. HÀM TÌM KIẾM
   @override
   Future<List<ArticleEntity>> searchArticles(String query) async {

@@ -13,196 +13,175 @@ class SearchPage extends ConsumerStatefulWidget {
   ConsumerState<SearchPage> createState() => _SearchPageState();
 }
 
-// ... (imports are fine)
-
 class _SearchPageState extends ConsumerState<SearchPage> {
-  // ... (controllers existing)
   final TextEditingController _controller = TextEditingController();
   final ChatbotService _chatbotService = ChatbotService();
+  final FocusNode _focusNode = FocusNode();
 
-  // List chứa 2 phần: Backend + Chatbot
   List<ArticleEntity> _backendResults = [];
   List<ArticleEntity> _chatbotResults = [];
-
   bool _isLoading = false;
   String? _error;
   bool _hasSearched = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   void _doSearch() async {
     final query = _controller.text.trim();
     if (query.isEmpty) return;
 
-    // Reset state
+    _focusNode.unfocus();
+
     setState(() {
       _isLoading = true;
       _error = null;
-      _backendResults = [];
-      _chatbotResults = [];
       _hasSearched = true;
     });
 
+    final results = await Future.wait([
+      _searchFromBackend(query),
+      _searchFromAI(query),
+    ]);
+
+    if (mounted) {
+      print("DEBUG: Backend trả về ${results[0].length} bài");
+      print("DEBUG: AI trả về ${results[1].length} bài"); // NẾU DÒNG NÀY RA 0 THÌ DO API
+      setState(() {
+        _backendResults = results[0];
+        _chatbotResults = results[1];
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<List<ArticleEntity>> _searchFromBackend(String query) async {
     try {
-      // 1. Gọi song song 2 API
-      final backendFuture =
-          ref.read(articleRepositoryProvider).searchArticles(query);
-      final chatbotFuture = _chatbotService.searchArticles(query);
+      return await ref.read(articleRepositoryProvider).searchArticles(query);
+    } catch (e) {
+      debugPrint("⚠️ Lỗi Backend: $e");
+      return [];
+    }
+  }
 
-      // Chạy chờ cả 2 cùng xong (Future.wait)
-      // Lưu ý: Nếu 1 cái lỗi, cái kia vẫn chạy nếu handle try/catch riêng.
-      // Ở đây dùng Future.wait đơn giản, nếu 1 cái lỗi sẽ nhảy xuống catch chung.
-      // Để robust hơn nên soft-fail, nhưng tạm thời làm đơn giản.
-      final results = await Future.wait([
-        backendFuture,
-        chatbotFuture,
-      ]);
+  Future<List<ArticleEntity>> _searchFromAI(String query) async {
+    try {
+      final dynamic response = await _chatbotService.searchArticles(query);
 
-      // 2. Xử lý kết quả Backend
-      final backendList = results[0] as List<ArticleEntity>;
+      // ✅ CASE 1: Backend trả THẲNG LIST
+      if (response is List) {
+        return response.map((item) => _mapToArticle(item)).toList();
+      }
 
-      // 3. Xử lý kết quả Chatbot (List<dynamic> -> List<ArticleEntity>)
-      final chatbotRaw = results[1] as List<dynamic>;
-      final chatbotList = chatbotRaw.where((item) => (item['score'] ?? 0) > 0.50).map((item) {
-        final rawDate =
-            item['published_at'] ?? DateTime.now().toIso8601String();
-        final DateTime pubDate = DateTime.tryParse(rawDate) ?? DateTime.now();
-
-        return ArticleEntity(
-          id: item['article_id'],
-          title: item['title'] ?? 'Gợi ý từ AI',
-          content: item['chunk_text'] ?? '',
-          publishedAt: pubDate,
-          category: item['category'] ?? 'AI Gợi ý',
-          authorName: item['author_name'] ?? 'AI Bot',
-          imageUrl: item['image_url'],
-          matchScore: item['score'],
-        );
-      }).toList();
-
-      if (mounted) {
-        setState(() {
-          _backendResults = backendList;
-          _chatbotResults = chatbotList.cast<ArticleEntity>();
-        });
+      // ✅ CASE 2: Backend trả MAP { results: [...] }
+      if (response is Map && response['results'] is List) {
+        return (response['results'] as List)
+            .map((item) => _mapToArticle(item))
+            .toList();
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      debugPrint("⚠️ Lỗi AI: $e");
     }
+    return [];
+  }
+
+  ArticleEntity _mapToArticle(dynamic item) {
+    final Map<String, dynamic> articleMap = Map<String, dynamic>.from(item);
+    final rawDate = articleMap['published_at'] ?? DateTime.now().toIso8601String();
+
+    String displayTitle =
+        articleMap['title'] ?? articleMap['chunk_text'] ?? "Gợi ý từ AI";
+    if (displayTitle.length > 60) {
+      displayTitle = "${displayTitle.substring(0, 60)}...";
+    }
+
+    return ArticleEntity(
+      id: articleMap['article_id'] ?? 0,
+      title: displayTitle,
+      content: articleMap['chunk_text'] ?? '',
+      publishedAt: DateTime.tryParse(rawDate) ?? DateTime.now(),
+      category: articleMap['category'] ?? 'AI Gợi ý',
+      authorName: articleMap['author_name'] ?? 'AI Bot',
+      imageUrl: articleMap['image_url'],
+      matchScore: (articleMap['score'] as num?)?.toDouble() ?? 0.0,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Tổng số item = backend + chatbot + separator (nếu có chatbot)
+    // --- KHAI BÁO CÁC BIẾN LOGIC ĐỂ PHÂN CHIA DANH SÁCH ---
     final backendCount = _backendResults.length;
     final chatbotCount = _chatbotResults.length;
     final bool showSeparator = chatbotCount > 0;
-    
-    // Nếu có chatbot thì thêm 1 item cho separator
     final totalCount = backendCount + chatbotCount + (showSeparator ? 1 : 0);
 
     return Scaffold(
       backgroundColor: const Color(0xFF111214),
       appBar: AppBar(
         backgroundColor: const Color(0xFF111214),
-        title: const Text('Tìm kiếm AI', style: TextStyle(color: Colors.white)),
+        elevation: 0,
+        centerTitle: true,
+        title: const Text('Tìm kiếm AI',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
         leading: const BackButton(color: Colors.white),
       ),
       body: Column(
         children: [
-          // SEARCH INPUT
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: 'Nhập nội dung cần tìm...',
-                      hintStyle:
-                          TextStyle(color: Colors.white.withOpacity(0.5)),
-                      filled: true,
-                      fillColor: const Color(0xFF1E2023),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 16),
-                    ),
-                    onSubmitted: (_) => _doSearch(),
-                  ),
+          _buildSearchInput(),
+          if (_isLoading)
+            const Expanded(child: Center(child: CircularProgressIndicator(color: Color(0xFFbb1819)))),
+
+          if (!_isLoading && _hasSearched)
+            Expanded(
+              child: totalCount == 0
+                  ? _buildEmptyState()
+                  : _buildResultsList(totalCount, backendCount, showSeparator),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchInput() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              style: const TextStyle(color: Colors.white),
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _doSearch(),
+              decoration: InputDecoration(
+                hintText: 'Bạn muốn tìm tin tức gì?',
+                hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+                filled: true,
+                fillColor: const Color(0xFF1E2023),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: _doSearch,
-                  icon: const Icon(Icons.search),
-                  style: IconButton.styleFrom(
-                    backgroundColor: const Color(0xFFbb1819),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.all(12),
-                  ),
-                )
-              ],
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+              ),
             ),
           ),
-
-          if (_isLoading)
-            const Expanded(child: Center(child: CircularProgressIndicator())),
-
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text('Lỗi: $_error',
-                  style: const TextStyle(color: Colors.red)),
-            ),
-
-          if (!_isLoading && totalCount == 0 && _hasSearched && _error == null)
-             const Padding(
-              padding: EdgeInsets.only(top: 20),
-              child: Text("Không tìm thấy kết quả phù hợp",
-                  style: TextStyle(color: Colors.white54)),
-            ),
-
-          // RESULTS LIST
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              itemCount: totalCount,
-              separatorBuilder: (ctx, i) {
-                 // Không cần separator divider nếu đó là vị trí của Header "ĐỀ XUẤT"
-                 // Nhưng để đơn giản ta cứ để divider mờ
-                 return const Divider(color: Colors.white12, height: 1);
-              },
-              itemBuilder: (context, index) {
-                // LOGIC RENDER LIST GỘP
-
-                // 1. Nếu index nằm trong vùng Backend
-                if (index < backendCount) {
-                  return _buildArticleItem(_backendResults[index]);
-                }
-
-                // 2. Nếu là vị trí Separator
-                // (Index backendCount chính là phần tử tiếp theo sau list backend)
-                if (showSeparator && index == backendCount) {
-                  return _buildSeparatorLabel();
-                }
-
-                // 3. Nếu là vùng Chatbot
-                // index thực tế trong list chatbot = index - (backend + 1 separator)
-                final chatbotIndex = index - (backendCount + (showSeparator ? 1 : 0));
-                return _buildArticleItem(_chatbotResults[chatbotIndex], isAiSuggestion: true);
-              },
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: _doSearch,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFbb1819),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.send, color: Colors.white, size: 20),
             ),
           ),
         ],
@@ -210,18 +189,59 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     );
   }
 
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.search_off, size: 60, color: Colors.white24),
+          SizedBox(height: 16),
+          Text("Không tìm thấy kết quả phù hợp", style: TextStyle(color: Colors.white54)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultsList(int totalCount, int backendCount, bool showSeparator) {
+    return ListView.separated(
+      padding: const EdgeInsets.only(bottom: 24),
+      itemCount: totalCount,
+      separatorBuilder: (ctx, i) => const Divider(color: Colors.white12, height: 1, indent: 16, endIndent: 16),
+      itemBuilder: (context, index) {
+        // 1. Kết quả từ Backend
+        if (index < backendCount) {
+          return _buildArticleItem(_backendResults[index]);
+        }
+        // 2. Nhãn ngăn cách AI
+        if (showSeparator && index == backendCount) {
+          return _buildSeparatorLabel();
+        }
+        // 3. Kết quả từ AI
+        final chatbotIndex = index - (backendCount + (showSeparator ? 1 : 0));
+        if (chatbotIndex >= 0 && chatbotIndex < _chatbotResults.length) {
+          return _buildArticleItem(_chatbotResults[chatbotIndex], isAiSuggestion: true);
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
   Widget _buildSeparatorLabel() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       child: Row(
         children: const [
-           Expanded(child: Divider(color: Colors.white24)),
-           Padding(
-             padding: EdgeInsets.symmetric(horizontal: 12),
-             child: Text("---- AI ĐỀ XUẤT ----", style: TextStyle(color: Color(0xFFbb1819), fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-           ),
-           Expanded(child: Divider(color: Colors.white24)),
+          Expanded(child: Divider(color: Colors.white24)),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            child: Text("ĐỀ XUẤT TỪ AI",
+                style: TextStyle(
+                    color: Color(0xFFbb1819),
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                    fontSize: 12)),
+          ),
+          Expanded(child: Divider(color: Colors.white24)),
         ],
       ),
     );
@@ -230,119 +250,38 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Widget _buildArticleItem(ArticleEntity entity, {bool isAiSuggestion = false}) {
     return InkWell(
       onTap: () {
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => ArticlePage(
-                      article: entity,
-                      articleSlug: entity.id.toString(),
-                    )));
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => ArticlePage(article: entity, articleSlug: entity.id.toString())));
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                entity.imageUrl ?? "https://via.placeholder.com/150",
-                width: 110,
-                height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 110,
-                  height: 80,
-                  color: const Color(0xFF2A2C30),
-                  child: const Icon(Icons.image_not_supported,
-                      color: Colors.grey),
-                ),
-              ),
+              child: _buildImage(entity.imageUrl),
             ),
             const SizedBox(width: 12),
-            // Content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    entity.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      height: 1.3,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
+                  Text(entity.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14, height: 1.3)),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
-                      // Badge nếu là AI
-                      if (isAiSuggestion && entity.matchScore != null) ...[
-                         Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.2), // Màu xanh lá cho score
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(
-                                  color: Colors.green.withOpacity(0.5))),
-                          child: Text(
-                            "${(entity.matchScore! * 100).toStringAsFixed(0)}% Match", // Hiển thị %
-                            style: const TextStyle(
-                                color: Colors.green,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ] else if (isAiSuggestion) ...[ // If AI but no score, show generic AI badge
-                         Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(
-                                  color: Colors.blue.withOpacity(0.5))),
-                          child: const Text(
-                            "AI Suggested",
-                            style: TextStyle(
-                                color: Colors.blue,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ] else ...[
-                        // Badge Tin tức thường
-                         Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                              color: const Color(0xFFbb1819).withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(4),
-                              ),
-                          child: Text(
-                             (entity.category.isNotEmpty ? entity.category : 'Tin tức').toUpperCase(),
-                            style: const TextStyle(
-                                color: Color(0xFFbb1819),
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      
+                      _buildCategoryBadge(entity, isAiSuggestion),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          "${entity.authorName} • ${DateFormat('dd/MM').format(entity.publishedAt)}",
+                          "${entity.authorName} • ${DateFormat('dd/MM').format(entity.publishedAt ?? DateTime.now())}",
+                          style: const TextStyle(color: Colors.grey, fontSize: 11),
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Colors.grey, fontSize: 11),
                         ),
                       )
                     ],
@@ -353,6 +292,43 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildImage(String? url) {
+    if (url == null || !url.startsWith('http')) {
+      return Container(
+          width: 110,
+          height: 80,
+          color: const Color(0xFF2A2C30),
+          child: const Icon(Icons.image_not_supported, color: Colors.grey));
+    }
+    return Image.network(
+      url,
+      width: 110,
+      height: 80,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Container(
+          width: 110,
+          height: 80,
+          color: const Color(0xFF2A2C30),
+          child: const Icon(Icons.broken_image, color: Colors.grey)),
+    );
+  }
+
+  Widget _buildCategoryBadge(ArticleEntity entity, bool isAi) {
+    Color color = isAi ? Colors.green : const Color(0xFFbb1819);
+    String label = isAi
+        ? "${((entity.matchScore ?? 0) * 100).toStringAsFixed(0)}% Match"
+        : (entity.category ?? "Tin tức").toUpperCase();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+          color: color.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: color.withOpacity(0.5), width: 0.5)),
+      child: Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
     );
   }
 }

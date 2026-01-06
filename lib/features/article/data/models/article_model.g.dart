@@ -29,6 +29,6 @@ Map<String, dynamic> _$ArticleModelToJson(ArticleModel instance) =>
       'content': instance.content,
       'category': instance.category,
       'publishedAt': instance.publishedAt?.toIso8601String(),
-      'author': instance.author,
+      'author': instance.author?.toJson(),
       'imageUrl': instance.image,
     };

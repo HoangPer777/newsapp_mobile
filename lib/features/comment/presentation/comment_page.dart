@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/comment_model.dart';
 import '../data/comment_service.dart';
+import 'package:go_router/go_router.dart';
 
 class CommentPage extends StatefulWidget {
   final int articleId;
@@ -52,34 +53,94 @@ class _CommentsBottomSheetState extends State<CommentPage> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    // Kiểm tra login sơ bộ ở UI
-    if (widget.currentUserId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Bạn cần đăng nhập để bình luận")),
+    // 1. Ẩn bàn phím trước cho gọn
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    try {
+      // 2. Gọi API
+      await commentService.addComment(
+        widget.articleId,
+        text,
       );
-      return;
-    }
 
-    // Gọi service
-    final ok = await commentService.addComment(
-      widget.articleId,
-      text,
-    );
-
-    if (ok) {
+      // --- NẾU CHẠY ĐẾN ĐÂY LÀ THÀNH CÔNG ---
       _controller.clear();
-      // Ẩn bàn phím
-      FocusManager.instance.primaryFocus?.unfocus();
-      // Load lại danh sách để hiện comment mới
-      await loadComments();
-    } else {
+      await loadComments(); // Load lại danh sách
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Lỗi gửi bình luận (Hết phiên đăng nhập?)")),
+          const SnackBar(content: Text("Đã gửi bình luận!"), backgroundColor: Colors.green),
         );
       }
+
+    } catch (e) {
+    // --- HỨNG LỖI TẠI ĐÂY ---
+    if (!mounted) return;
+
+    // Kiểm tra các từ khóa liên quan đến quyền truy cập
+    final errStr = e.toString().toLowerCase();
+    if (errStr.contains("unauthorized") || errStr.contains("401") || errStr.contains("403")) {
+
+      // --- DÙNG DIALOG THAY VÌ SNACKBAR ĐỂ CHẮC CHẮN HIỆN ---
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Yêu cầu đăng nhập"),
+          content: const Text("Bạn chưa đăng nhập. Vui lòng đăng nhập để bình luận."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context), // Đóng hộp thoại
+              child: const Text("Hủy", style: TextStyle(color: Colors.grey)),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFbb1819)),
+              onPressed: () {
+                Navigator.pop(context); // Đóng dialog
+                context.push('/login'); // Chuyển trang Login
+              },
+              child: const Text("Đăng nhập ngay"),
+            ),
+          ],
+        ),
+      );
+      // -----------------------------------------------------
+
+    } else {
+      // Lỗi khác thì vẫn hiện SnackBar bình thường
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Không thể gửi: $e"), backgroundColor: Colors.red),
+      );
+    }
     }
   }
+  //   // Kiểm tra login sơ bộ ở UI
+  //   if (widget.currentUserId == null) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text("Bạn cần đăng nhập để bình luận")),
+  //     );
+  //     return;
+  //   }
+  //
+  //   // Gọi service
+  //   final ok = await commentService.addComment(
+  //     widget.articleId,
+  //     text,
+  //   );
+  //
+  //   if (ok) {
+  //     _controller.clear();
+  //     // Ẩn bàn phím
+  //     FocusManager.instance.primaryFocus?.unfocus();
+  //     // Load lại danh sách để hiện comment mới
+  //     await loadComments();
+  //   } else {
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text("Lỗi gửi bình luận (Hết phiên đăng nhập?)")),
+  //       );
+  //     }
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {

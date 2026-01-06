@@ -3,7 +3,7 @@ import '../../domain/entities/article_entity.dart';
 import 'author_model.dart';
 part 'article_model.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true) // Thêm explicitToJson để convert cả AuthorModel
 class ArticleModel {
   final int id;
   final String? title;
