@@ -36,7 +36,9 @@ class _AddArticlePageState extends ConsumerState<AddArticlePage> {
       final state = ref.read(addArticleProvider);
       if (!state.hasError && mounted) {
         // THÊM DÒNG NÀY: Làm mới danh sách bài báo ở trang chủ
-        ref.invalidate(articleListProvider);
+        ref.invalidate(articleListProvider('newest'));
+        ref.invalidate(articleListProvider('most_viewed'));
+        ref.invalidate(articleListProvider('most_liked'));
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Đã đăng bài báo thành công!'), backgroundColor: Colors.green),

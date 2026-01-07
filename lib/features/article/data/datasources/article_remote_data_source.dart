@@ -4,8 +4,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/di/providers.dart';
 import '../models/article_model.dart';
 
+
 abstract class ArticleRemoteDataSource {
-  Future<List<ArticleModel>> getArticles();
+  Future<List<ArticleModel>> getArticles({String? sort});
   Future<ArticleModel> fetchArticleBySlug(String slug);
   Future<void> createArticle(Map<String, dynamic> articleData);
   Future<List<ArticleModel>> searchArticles(String query);
@@ -19,9 +20,11 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
 
   // HÀM LẤY DANH SÁCH
   @override
-  Future<List<ArticleModel>> getArticles() async {
+  Future<List<ArticleModel>> getArticles({String? sort}) async {
     try {
-      final response = await dio.get('/api/articles');
+      final response = await dio.get('/api/articles', queryParameters: {
+        if (sort != null) 'sort': sort,
+      });
       // Lưu ý: Cần đảm bảo API trả về List trực tiếp.
       // Nếu API trả về { data: [] } thì phải sửa thành response.data['data']
       final List<dynamic> contentList = response.data;
