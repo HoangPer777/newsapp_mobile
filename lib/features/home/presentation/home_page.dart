@@ -113,41 +113,123 @@ class HomePage extends ConsumerWidget {
   }
 }
 
+final _selectedSortProvider = StateProvider<String>((ref) => 'newest');
+
 // --- WIDGET HIỂN THỊ DANH SÁCH TIN ---
-class _NewsTab extends ConsumerWidget {
+class _NewsTab extends ConsumerStatefulWidget {
   const _NewsTab();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final asyncArticles = ref.watch(articleListProvider);
+  ConsumerState<_NewsTab> createState() => _NewsTabState();
+}
 
-    return asyncArticles.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text('Lỗi tải tin: $err',
-              style: const TextStyle(color: Colors.red)),
+class _NewsTabState extends ConsumerState<_NewsTab> {
+  @override
+  Widget build(BuildContext context) {
+    final selectedSort = ref.watch(_selectedSortProvider);
+    final asyncArticles = ref.watch(articleListProvider(selectedSort));
+
+    return Stack(
+      children: [
+        Column(
+          children: [
+            Expanded(
+              child: asyncArticles.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text('Lỗi tải tin: $err',
+                        style: const TextStyle(color: Colors.red)),
+                  ),
+                ),
+                data: (articles) {
+                  if (articles.isEmpty) {
+                    return const Center(
+                        child: Text("Chưa có bài báo nào",
+                            style: TextStyle(color: Colors.white70)));
+                  }
+
+                  return ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    itemCount: articles.length,
+                    separatorBuilder: (_, __) =>
+                    const Divider(height: 1, color: Color(0xFF2A2C30)),
+                    itemBuilder: (context, index) {
+                      return _ArticleItem(article: articles[index]);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
-      ),
-      data: (articles) {
-        if (articles.isEmpty) {
-          return const Center(
-              child: Text("Chưa có bài báo nào",
-                  style: TextStyle(color: Colors.white70)));
-        }
-
-        return ListView.separated(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          itemCount: articles.length,
-          separatorBuilder: (_, __) =>
-          const Divider(height: 1, color: Color(0xFF2A2C30)),
-          itemBuilder: (context, index) {
-            return _ArticleItem(article: articles[index]);
-          },
-        );
-      },
+        Positioned(
+          top: 8.0, // Khoảng cách từ trên xuống
+          right: 16.0, // Khoảng cách từ phải sang
+          child: SizedBox(
+            width: 160, // Điều chỉnh chiều rộng theo ý muốn
+            child: PopupMenuButton<String>(
+              color: const Color(0xFF1E2023),
+              initialValue: selectedSort,
+              onSelected: (String newValue) {
+                ref.read(_selectedSortProvider.notifier).state = newValue;
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  value: 'newest',
+                  child: Text('Mới nhất', style: TextStyle(color: selectedSort == 'newest' ? const Color(0xFFbb1819) : Colors.white)),
+                ),
+                PopupMenuItem<String>(
+                  value: 'most_viewed',
+                  child: Text('Xem nhiều', style: TextStyle(color: selectedSort == 'most_viewed' ? const Color(0xFFbb1819) : Colors.white)),
+                ),
+                PopupMenuItem<String>(
+                  value: 'most_liked',
+                  child: Text('Thích nhiều', style: TextStyle(color: selectedSort == 'most_liked' ? const Color(0xFFbb1819) : Colors.white)),
+                ),
+              ],
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E2023),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF2A2C30)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.filter_list, color: const Color(0xFFbb1819)),
+                    SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        _getSortText(selectedSort),
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Icon(Icons.arrow_drop_down, color: Colors.white70),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
+  }
+
+  String _getSortText(String sortValue) {
+    switch (sortValue) {
+      case 'newest':
+        return 'Mới nhất';
+      case 'most_viewed':
+        return 'Xem nhiều';
+      case 'most_liked':
+        return 'Thích nhiều';
+      default:
+        return 'Mới nhất';
+    }
   }
 }
 

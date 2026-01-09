@@ -46,7 +46,7 @@ class _ArticlePageState extends ConsumerState<ArticlePage> {
     final state = ref.watch(articleDetailNotifierProvider);
 
     // 2. Lấy danh sách tin tức khác để hiển thị ở dưới
-    final relatedState = ref.watch(articleListProvider);
+    final relatedState = ref.watch(articleListProvider('newest'));
 
     ArticleEntity? displayArticle = widget.article;
     bool isLoading = false;

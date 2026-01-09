@@ -5,6 +5,7 @@ import '../../domain/entities/article_entity.dart';
 import '../../domain/repositories/article_repository.dart';
 import '../datasources/article_remote_data_source.dart';
 
+
 class ArticleRepositoryImpl implements ArticleRepository {
   final ArticleRemoteDataSource remoteDataSource;
 
@@ -12,9 +13,9 @@ class ArticleRepositoryImpl implements ArticleRepository {
 
   //1. HÀM LẤY DANH SÁCH
   @override
-  Future<List<ArticleEntity>> getArticles() async {
+  Future<List<ArticleEntity>> getArticles({String? sort}) async {
     // Gọi Data Source để lấy List<ArticleModel>
-    final models = await remoteDataSource.getArticles();
+    final models = await remoteDataSource.getArticles(sort: sort);
 
     // Chuyển đổi (Map) từng Model sang Entity
     return models.map((model) => model.toEntity()).toList();
