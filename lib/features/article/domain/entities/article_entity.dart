@@ -10,6 +10,7 @@ class ArticleEntity {
   final String? authorName;
   final String? imageUrl;
   final double? matchScore; // [NEW] AI Match score (0.0 - 1.0)
+  final int? viewCount; // [NEW] Số lượt xem
 
   const ArticleEntity({
     this.id,
@@ -20,6 +21,7 @@ class ArticleEntity {
     this.authorName,
     this.imageUrl,
     this.matchScore,
+    this.viewCount,
   });
 
   Map<String, dynamic> toJson() {
@@ -30,7 +32,7 @@ class ArticleEntity {
       'slug': title.toLowerCase().replaceAll(' ', '-'),
       'category': category,
       'authorName': authorName,
+      'viewCount': viewCount, // Add viewCount to JSON
     };
   }
-
 }
