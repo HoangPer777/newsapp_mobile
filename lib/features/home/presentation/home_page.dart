@@ -61,7 +61,7 @@ class HomePage extends ConsumerWidget {
       'Xem nhiều',
       'Kinh doanh',
       'Thế giới',
-      'Đọc nhanh',
+
     ];
 
     final scheme = ColorScheme.fromSeed(
@@ -86,16 +86,12 @@ class HomePage extends ConsumerWidget {
             ],
             body: TabBarView(
               children: [
-                const _NewsTab(), // Trang chủ (có thể vẫn hiển thị tất cả)
+                const _NewsTab(), // Trang chủ
                 const _LatestArticlesTab(), // Mới nhất
                 const _MostViewedArticlesTab(), // Xem nhiều
                 const _BusinessArticlesTab(), // Kinh doanh
                 const _WorldArticlesTab(), // Thế giới
-                // For 'Đọc nhanh', for now, it can be a generic tab or you can implement specific logic.
-                const Center(
-                  child: Text('Tính năng Đọc nhanh đang được cập nhật...',
-                      style: TextStyle(color: Colors.white70)),
-                ),
+
               ],
             ),
           ),
