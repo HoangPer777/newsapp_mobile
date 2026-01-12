@@ -508,7 +508,7 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
               ),
               Center(
                 child: TextButton(
-                    onPressed: () {},
+                    onPressed: () => context.push('/forgot-password'),
                     child: const Text("Quên mật khẩu",
                         style: TextStyle(
                             color: Colors.grey,

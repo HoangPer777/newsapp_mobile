@@ -6,8 +6,42 @@ import '../../../../core/config/env.dart';
 import '../../presentation/providers/auth_provider.dart'; // FIX 2: Import provider để gọi được authProvider
 
 class AuthService {
-  // FIX 3: Khai báo biến _baseUrl bị thiếu
+
   static final String _baseUrl = '${Env.apiBase}/auth';
+
+  // 1. Gửi yêu cầu mã OTP
+  static Future<void> forgotPassword(String email) async {
+    final res = await http.post(
+      Uri.parse('$_baseUrl/forgot-password'),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"email": email}),
+    );
+    if (res.statusCode != 200) {
+      String msg = 'Email không tồn tại hoặc lỗi hệ thống';
+      try {
+        final body = jsonDecode(res.body);
+        if (body['message'] != null) msg = body['message'];
+      } catch (_) {}
+      throw Exception(msg);
+    }
+  }
+
+  // 2. Xác nhận mã và đặt mật khẩu mới
+  static Future<void> resetPassword(String email, String token, String newPassword) async {
+    final res = await http.post(
+      Uri.parse('$_baseUrl/reset-password'),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "email": email,
+        "token": token,
+        "newPassword": newPassword,
+      }),
+    );
+    if (res.statusCode != 200) {
+      final body = jsonDecode(res.body);
+      throw Exception(body['message'] ?? 'Mã xác nhận không đúng hoặc đã hết hạn');
+    }
+  }
 
   static Future<void> loginAndFetchProfile(WidgetRef ref, String email, String password) async {
     final res = await http.post(

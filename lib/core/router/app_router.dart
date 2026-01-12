@@ -5,6 +5,7 @@ import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/register_page.dart';
 import '../../features/article/presentation/widgets/article_page.dart';
 import '../../features/chatbot/presentation/chat_page.dart';
+import '../../features/menu/presentation/menu_page/ForgotPasswordPage.dart';
 import '../../features/search/presentation/search_page.dart';
 import '../../features/comment/presentation/comment_page.dart';
 import '../../features/menu/presentation/menu_page/menu_page.dart';
@@ -38,6 +39,7 @@ class AppRouter {
       ),
       GoRoute(path: '/account', builder: (c, s) => const AccountPage()),
       GoRoute(path: '/account/edit', builder: (c, s) => const EditAccountPage()),
+      GoRoute(path: '/forgot-password', builder: (context, state) => const ForgotPasswordPage(),),
     ],
   );
 }
