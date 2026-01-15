@@ -275,25 +275,28 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget _buildSocialLoginButtons() {
     return Column(
       children: [
-        _socialButton(
-          Icons.login, // Bạn có thể dùng icon Google tùy chỉnh nếu có
-          'Đăng nhập bằng Google',
-          onTap: () => _handleGoogleSignIn(), // Gọi hàm xử lý bên dưới
+        const SizedBox(height: 24),
+        _buildSocialLoginButton(
+          icon: Icons.phone_iphone,
+          label: 'Đăng nhập bằng Apple ID',
+          onTap: () => _handleSocialLogin('Apple'),
         ),
         const SizedBox(height: 12),
-        _socialButton(
-          Icons.facebook,
-          'Đăng nhập bằng Facebook',
-          color: const Color(0xFF1877F2),
-          onTap: () {
-            // Xử lý Facebook sau
-          },
+        _buildSocialLoginButton(
+          icon: Icons.login, // Hoặc Icons.g_mobiledata
+          label: 'Đăng nhập bằng Google',
+          onTap: () => _handleGoogleSignIn(), // Đổi sang hàm xử lý Google thật
         ),
       ],
     );
   }
 
-  Widget _socialButton(IconData icon, String label, {Color? color, VoidCallback? onTap}) {
+  Widget _buildSocialLoginButton({
+    required IconData icon,
+    required String label,
+    Color? color,
+    VoidCallback? onTap,
+  }) {
     return OutlinedButton(
       onPressed: onTap,
       style: OutlinedButton.styleFrom(
