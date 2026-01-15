@@ -10,6 +10,7 @@ import '../data/home_api.dart';
 import '../../article/presentation/providers/article_list_provider.dart';
 import '../../article/presentation/widgets/article_page.dart';
 import '../../article/domain/entities/article_entity.dart';
+import '../../article/domain/services/article_service.dart';
 
 /// Provider để kiểm tra quyền Admin từ bộ nhớ máy
 // final userRoleProvider = FutureProvider<String?>((ref) async {
@@ -23,26 +24,44 @@ final healthProvider = FutureProvider<String>((ref) async {
   return HomeApi(dio).health();
 });
 
+// Provider for Most Viewed Articles
+final mostViewedArticleListProvider = FutureProvider<List<ArticleEntity>>((ref) async {
+  final articleService = ref.read(articleServiceProvider);
+  final allArticles = await articleService.getAllArticles();
+  // For demonstration, let's assume articles have a 'viewCount' field
+  // In a real app, you would fetch genuinely most viewed articles.
+  allArticles.sort((a, b) => (b.viewCount ?? 0).compareTo(a.viewCount ?? 0));
+  return allArticles.take(10).toList();
+});
+
+// Provider for Business Articles
+final businessArticlesProvider = FutureProvider<List<ArticleEntity>>((ref) async {
+  final articleService = ref.read(articleServiceProvider);
+  final allArticles = await articleService.getAllArticles();
+  return allArticles.where((article) => article.category?.toLowerCase() == 'kinh doanh').toList();
+});
+
+// Provider for World Articles
+final worldArticlesProvider = FutureProvider<List<ArticleEntity>>((ref) async {
+  final articleService = ref.read(articleServiceProvider);
+  final allArticles = await articleService.getAllArticles();
+  return allArticles.where((article) => article.category?.toLowerCase() == 'thế giới').toList();
+});
+
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // // Lắng nghe quyền của người dùng (ADMIN/USER)
-    // final userRoleAsync = ref.watch(userRoleProvider);
-// 1. THAY ĐỔI QUAN TRỌNG: Nghe trực tiếp từ authProvider
-    // Khi đăng nhập thành công bên kia, authProvider đổi state -> Widget này vẽ lại ngay lập tức
     final authState = ref.watch(authProvider);
-    // 2. Kiểm tra quyền Admin từ biến authState (RAM) thay vì đọc ổ cứng
-    // Dùng .toUpperCase() để chắc chắn 'admin' hay 'ADMIN' đều nhận
     final bool isAdmin = authState.user?.role?.toUpperCase() == 'ADMIN';
     final categories = const [
       'Trang chủ',
       'Mới nhất',
-      'Đọc nhanh',
       'Xem nhiều',
       'Kinh doanh',
       'Thế giới',
+
     ];
 
     final scheme = ColorScheme.fromSeed(
@@ -67,14 +86,12 @@ class HomePage extends ConsumerWidget {
             ],
             body: TabBarView(
               children: [
-                const _NewsTab(),
-                ...List.generate(
-                  categories.length - 1,
-                      (_) => const Center(
-                    child: Text('Đang cập nhật...',
-                        style: TextStyle(color: Colors.white70)),
-                  ),
-                ),
+                const _NewsTab(), // Trang chủ
+                const _LatestArticlesTab(), // Mới nhất
+                const _MostViewedArticlesTab(), // Xem nhiều
+                const _BusinessArticlesTab(), // Kinh doanh
+                const _WorldArticlesTab(), // Thế giới
+
               ],
             ),
           ),
@@ -96,9 +113,9 @@ class HomePage extends ConsumerWidget {
               ? FloatingActionButton(
             backgroundColor: const Color(0xFFbb1819),
             child: const Icon(Icons.add, color: Colors.white),
-            onPressed: () => context.push('/add-article'), // Đảm bảo route này đúng trong router của Han
+            onPressed: () => context.push('/add-article'),
           )
-              : null, // Nếu không phải admin thì ẩn luôn
+              : null,
 
           bottomNavigationBar: _BottomNav(
             onTap: (i) {
@@ -113,7 +130,155 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-// --- WIDGET HIỂN THỊ DANH SÁCH TIN ---
+class _LatestArticlesTab extends ConsumerWidget {
+  const _LatestArticlesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncArticles = ref.watch(articleListProvider);
+
+    return asyncArticles.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text('Lỗi tải tin mới nhất: $err',
+              style: const TextStyle(color: Colors.red)),
+        ),
+      ),
+      data: (articles) {
+        if (articles.isEmpty) {
+          return const Center(
+              child: Text("Chưa có bài báo mới nhất",
+                  style: TextStyle(color: Colors.white70)));
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          itemCount: articles.length,
+          separatorBuilder: (_, __) =>
+          const Divider(height: 1, color: Color(0xFF2A2C30)),
+          itemBuilder: (context, index) {
+            return _ArticleItem(article: articles[index]);
+          },
+        );
+      },
+    );
+  }
+}
+
+class _MostViewedArticlesTab extends ConsumerWidget {
+  const _MostViewedArticlesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncArticles = ref.watch(mostViewedArticleListProvider);
+
+    return asyncArticles.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text('Lỗi tải tin xem nhiều nhất: $err',
+              style: const TextStyle(color: Colors.red)),
+        ),
+      ),
+      data: (articles) {
+        if (articles.isEmpty) {
+          return const Center(
+              child: Text("Chưa có bài báo xem nhiều nhất",
+                  style: TextStyle(color: Colors.white70)));
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          itemCount: articles.length,
+          separatorBuilder: (_, __) =>
+          const Divider(height: 1, color: Color(0xFF2A2C30)),
+          itemBuilder: (context, index) {
+            return _ArticleItem(article: articles[index]);
+          },
+        );
+      },
+    );
+  }
+}
+
+class _BusinessArticlesTab extends ConsumerWidget {
+  const _BusinessArticlesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncArticles = ref.watch(businessArticlesProvider);
+
+    return asyncArticles.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text('Lỗi tải tin kinh doanh: $err',
+              style: const TextStyle(color: Colors.red)),
+        ),
+      ),
+      data: (articles) {
+        if (articles.isEmpty) {
+          return const Center(
+              child: Text("Chưa có bài báo kinh doanh",
+                  style: TextStyle(color: Colors.white70)));
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          itemCount: articles.length,
+          separatorBuilder: (_, __) =>
+          const Divider(height: 1, color: Color(0xFF2A2C30)),
+          itemBuilder: (context, index) {
+            return _ArticleItem(article: articles[index]);
+          },
+        );
+      },
+    );
+  }
+}
+
+class _WorldArticlesTab extends ConsumerWidget {
+  const _WorldArticlesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncArticles = ref.watch(worldArticlesProvider);
+
+    return asyncArticles.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text('Lỗi tải tin thế giới: $err',
+              style: const TextStyle(color: Colors.red)),
+        ),
+      ),
+      data: (articles) {
+        if (articles.isEmpty) {
+          return const Center(
+              child: Text("Chưa có bài báo thế giới",
+                  style: TextStyle(color: Colors.white70)));
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          itemCount: articles.length,
+          separatorBuilder: (_, __) =>
+          const Divider(height: 1, color: Color(0xFF2A2C30)),
+          itemBuilder: (context, index) {
+            return _ArticleItem(article: articles[index]);
+          },
+        );
+      },
+    );
+  }
+}
+
+// --- WIDGET HIỂN THỊ DANH SÁCH TIN (Generic Tab for Home) ---
 class _NewsTab extends ConsumerWidget {
   const _NewsTab();
 
@@ -228,6 +393,23 @@ class _TopAppBar extends StatelessWidget {
         ],
       ),
       actions: [
+        // 1. NÚT LOGIN: Chỉ hiện khi CHƯA đăng nhập (!isLoggedIn)
+        IconButton(icon: const Icon(Icons.login, color: Colors.white70),
+            tooltip: 'Đăng nhập',
+            onPressed: () => context.push('/login')),
+        // const Padding(padding: EdgeInsets.only(right: 8),
+        //     child: _CircleIcon(icon: Icons.notifications_none)),
+        // // Nút test đăng nhập (tạm thời)
+        // Padding(
+        //   padding: const EdgeInsets.only(right: 8),
+        //   child: IconButton(
+        //     icon: const Icon(Icons.login, color: Colors.white70),
+        //     onPressed: () {
+        //       context.push('/login');
+        //     },
+        //     tooltip: 'Test Login',
+        //   ),
+        // ),
         Padding(
           padding: const EdgeInsets.only(right: 8),
           child: GestureDetector(
