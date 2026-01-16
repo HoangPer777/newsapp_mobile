@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../../core/di/providers.dart';
+import '../../menu/domain/services/auth_service.dart';
 import '../data/auth_repository.dart';
 import '../../menu/presentation/providers/auth_provider.dart';
 
@@ -156,7 +157,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 _buildSocialLoginButton(
                   icon: Icons.g_mobiledata, // Hoặc icon Google nếu có assets
                   label: 'Đăng nhập bằng Google',
-                  onTap: () => _handleSocialLogin('Google'),
+                  onTap: () => AuthService.signInWithGoogle(ref),
                 ),
 
                 const SizedBox(height: 40),

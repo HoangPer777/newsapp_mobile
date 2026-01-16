@@ -5,10 +5,50 @@ import '../../data/models/user.dart';
 import '../../../../core/config/env.dart';
 import '../../presentation/providers/auth_provider.dart';// FIX 2: Import provider để gọi được authProvider
 import 'package:http_parser/http_parser.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
 
   static final String _baseUrl = '${Env.apiBase}/auth';
+
+  static final GoogleSignIn _googleSignIn = GoogleSignIn(
+    // BẮT BUỘC dùng Web Client ID ở Giai đoạn 1
+    serverClientId: '307674059153-9djp3m9qqief5t5q9reslqoddeo4abls.apps.googleusercontent.com',
+  );
+
+  static Future<void> signInWithGoogle(WidgetRef ref) async {
+    try {
+      // 1. Mở popup chọn tài khoản
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return;
+
+      // 2. Lấy idToken
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+
+      if (idToken != null) {
+        // 3. Gửi idToken lên Spring Boot
+        final response = await http.post(
+          Uri.parse('${Env.apiBase}/auth/google'),
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({"idToken": idToken}),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          // 4. Lấy Profile và lưu vào Riverpod
+          final user = await getMe(data['accessToken'], data['userId']);
+          ref.read(authProvider.notifier).setAuth(data['accessToken'], user);
+        }
+        else {
+          final body = jsonDecode(response.body);
+          throw Exception(body['message'] ?? 'Google login failed');
+        }
+      }
+    } catch (e) {
+      print("Lỗi: $e");
+    }
+  }
 
   static Future<String> uploadAvatar(String token, int uid, String filePath) async {
     var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/upload-avatar?uid=$uid'));
