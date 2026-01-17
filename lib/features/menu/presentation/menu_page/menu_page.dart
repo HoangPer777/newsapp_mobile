@@ -69,7 +69,13 @@ class MenuPage extends ConsumerWidget {
         children: [
           // ================= USER INFO =================
           InkWell(
-            onTap: () => context.push('/account'),
+            onTap: () {
+              if (user == null) {
+                context.push('/login');
+              } else {
+                context.push('/account');
+              }
+            },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Row(

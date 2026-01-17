@@ -114,4 +114,26 @@ class AuthRepository {
   Future<String?> getToken() async {
     return await _storage.read(key: 'access_token');
   }
+
+  // 6. Đăng nhập bằng Google
+  Future<Map<String, dynamic>> loginWithGoogle(String idToken) async {
+    try {
+      final response = await _dio.post(
+        '/auth/google',
+        data: {'idToken': idToken},
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data['accessToken'] != null) {
+          await _storage.write(key: 'access_token', value: data['accessToken']);
+        }
+        return data;
+      } else {
+        throw Exception('Đăng nhập Google thất bại');
+      }
+    } on DioException catch (e) {
+      rethrow;
+    }
+  }
 }
