@@ -54,6 +54,7 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
+    print("Check Admin: ${authState.user?.role}");
     final bool isAdmin = authState.user?.role?.toUpperCase() == 'ADMIN';
     final categories = const [
       'Trang chủ',

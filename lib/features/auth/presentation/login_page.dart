@@ -63,7 +63,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       ref.read(authProvider.notifier).setAuth(token, userModel);
 
       // BƯỚC 4: Invalidate Role (để cập nhật giao diện nếu cần)
-      // ref.invalidate(userRoleProvider);
+      ref.invalidate(userRoleProvider);
 
       if (mounted) {
         context.go('/'); // Chuyển về trang chủ
@@ -370,6 +370,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
       // 5. Cập nhật Provider
       ref.read(authProvider.notifier).setAuth(token, userModel);
+
+      ref.invalidate(authProvider); // Ép các widget đang lắng nghe authProvider phải build lại
 
       if (mounted) {
         context.go('/'); // Đăng nhập thành công thì về trang chủ
