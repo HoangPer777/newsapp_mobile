@@ -26,7 +26,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     // Dùng mã WEB Client ID (lấy từ Google Cloud Console)
-    serverClientId: '782229500976-hnujerp4gbs3n41ib6vsarnt13pe3clt.apps.googleusercontent.com',
+    serverClientId: '307674059153-9djp3m9qqief5t5q9reslqoddeo4abls.apps.googleusercontent.com',
     scopes: ['email', 'profile'],
   );
 
@@ -149,15 +149,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                 const SizedBox(height: 24),
                 _buildSocialLoginButton(
-                  icon: Icons.phone_iphone,
-                  label: 'Đăng nhập bằng Apple ID',
-                  onTap: () => _handleSocialLogin('Apple'),
+                  icon: Icons.facebook,
+                  label: 'Đăng nhập bằng Facebook',
+                  onTap: () => _handleFacebookSignIn(), // Gọi hàm handler thay vì gọi trực tiếp Service
                 ),
                 const SizedBox(height: 12),
                 _buildSocialLoginButton(
                   icon: Icons.g_mobiledata, // Hoặc icon Google nếu có assets
                   label: 'Đăng nhập bằng Google',
-                  onTap: () => AuthService.signInWithGoogle(ref),
+                  onTap: () => _handleGoogleSignIn(),
                 ),
 
                 const SizedBox(height: 40),
@@ -318,6 +318,26 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _handleFacebookSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      await AuthService.signInWithFacebook(ref);
+
+      // Sau khi hàm trên chạy xong, kiểm tra lại state
+      if (mounted && ref.read(authProvider).isLoggedIn) {
+        context.go('/'); // Chuyển về trang chủ
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi Facebook: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _handleGoogleSignIn() async {

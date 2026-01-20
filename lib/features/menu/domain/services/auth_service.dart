@@ -6,13 +6,55 @@ import '../../../../core/config/env.dart';
 import '../../presentation/providers/auth_provider.dart';// FIX 2: Import provider để gọi được authProvider
 import 'package:http_parser/http_parser.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 class AuthService {
 
   static final String _baseUrl = '${Env.apiBase}/auth';
 
+  static Future<void> signInWithFacebook(WidgetRef ref) async {
+    try {
+      // 1. Mở popup đăng nhập Facebook
+      final LoginResult result = await FacebookAuth.instance.login(
+        permissions: ['email', 'public_profile'], // Yêu cầu quyền lấy email và profile
+      );
+
+      if (result.status == LoginStatus.success) {
+        // 2. Lấy AccessToken thành công
+        final AccessToken accessToken = result.accessToken!;
+
+        // Gửi token sang Spring Boot (Dùng .token thay vì .tokenString)
+        final response = await http.post(
+          Uri.parse('${Env.apiBase}/auth/facebook'),
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({"fbToken": accessToken.token}),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final String token = data['accessToken'];
+          final int userId = data['userId'];
+
+          // 3. Lấy Profile chi tiết từ hệ thống của bạn
+          final user = await getMe(token, userId);
+
+          // 4. Lưu vào AuthProvider
+          ref.read(authProvider.notifier).setAuth(token, user);
+
+          print("Đăng nhập Facebook thành công!");
+        } else {
+          throw Exception('Server xác thực Facebook thất bại');
+        }
+      } else {
+        print("Facebook Login Status: ${result.status}");
+        print("Message: ${result.message}");
+      }
+    } catch (e) {
+      print("Lỗi Facebook Login chi tiết: $e");
+    }
+  }
+
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
-    // BẮT BUỘC dùng Web Client ID ở Giai đoạn 1
     serverClientId: '307674059153-9djp3m9qqief5t5q9reslqoddeo4abls.apps.googleusercontent.com',
   );
 
@@ -115,10 +157,7 @@ class AuthService {
       final data = jsonDecode(res.body);
       String token = data['accessToken'];
 
-      // Kiểm tra xem backend trả về userId hay id
       int uid = data['userId'] ?? data['id'];
-
-      // Gọi tiếp API lấy profile đầy đủ
       UserModel user = await getMe(token, uid);
 
       // Lưu vào Riverpod Provider
