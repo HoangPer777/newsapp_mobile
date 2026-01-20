@@ -96,6 +96,19 @@ class HomePage extends ConsumerWidget {
             ),
           ),
 
+          // ---NÚT THÊM BÀI CHỈ HIỆN KHI LÀ ADMIN ---
+          // floatingActionButton: userRoleAsync.when(
+          //   data: (role) => role == 'ADMIN'
+          //       ? FloatingActionButton(
+          //     backgroundColor: const Color(0xFFbb1819),
+          //     child: const Icon(Icons.add, color: Colors.white),
+          //     onPressed: () => context.push('/add-article'),
+          //   )
+          //       : null,
+          //   loading: () => null,
+          //   error: (_, __) => null,
+          // ),
+          // Dùng biến isAdmin đã tính ở trên, cực nhanh và mượt
           floatingActionButton: isAdmin
               ? FloatingActionButton(
             backgroundColor: const Color(0xFFbb1819),
@@ -384,6 +397,19 @@ class _TopAppBar extends StatelessWidget {
         IconButton(icon: const Icon(Icons.login, color: Colors.white70),
             tooltip: 'Đăng nhập',
             onPressed: () => context.push('/login')),
+        // const Padding(padding: EdgeInsets.only(right: 8),
+        //     child: _CircleIcon(icon: Icons.notifications_none)),
+        // // Nút test đăng nhập (tạm thời)
+        // Padding(
+        //   padding: const EdgeInsets.only(right: 8),
+        //   child: IconButton(
+        //     icon: const Icon(Icons.login, color: Colors.white70),
+        //     onPressed: () {
+        //       context.push('/login');
+        //     },
+        //     tooltip: 'Test Login',
+        //   ),
+        // ),
         Padding(
           padding: const EdgeInsets.only(right: 8),
           child: GestureDetector(

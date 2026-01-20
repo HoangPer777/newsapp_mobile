@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../../core/di/providers.dart';
+import '../../menu/domain/services/auth_service.dart';
 import '../data/auth_repository.dart';
 import '../../menu/presentation/providers/auth_provider.dart';
+
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -20,6 +23,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _authRepository = AuthRepository();
   bool _isLoading = false;
+
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    // Dùng mã WEB Client ID (lấy từ Google Cloud Console)
+    serverClientId: '307674059153-9djp3m9qqief5t5q9reslqoddeo4abls.apps.googleusercontent.com',
+    scopes: ['email', 'profile'],
+  );
 
   @override
   void dispose() {
@@ -121,7 +130,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 const Text('Mật khẩu', style: TextStyle(color: Colors.white, fontSize: 14)),
                 const SizedBox(height: 8),
                 _buildPasswordField(),
-
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: () => context.push('/forgot-password'),
+                    child: const Text(
+                      'Quên mật khẩu?',
+                      style: TextStyle(color: Color(0xFFBB1819), fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 32),
                 _buildContinueButton(),
 
@@ -130,15 +149,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                 const SizedBox(height: 24),
                 _buildSocialLoginButton(
-                  icon: Icons.phone_iphone,
-                  label: 'Đăng nhập bằng Apple ID',
-                  onTap: () => _handleSocialLogin('Apple'),
+                  icon: Icons.facebook,
+                  label: 'Đăng nhập bằng Facebook',
+                  onTap: () => _handleFacebookSignIn(), // Gọi hàm handler thay vì gọi trực tiếp Service
                 ),
                 const SizedBox(height: 12),
                 _buildSocialLoginButton(
                   icon: Icons.g_mobiledata, // Hoặc icon Google nếu có assets
                   label: 'Đăng nhập bằng Google',
-                  onTap: () => _handleSocialLogin('Google'),
+                  onTap: () => _handleGoogleSignIn(),
                 ),
 
                 const SizedBox(height: 40),
@@ -254,26 +273,127 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
-  Widget _buildSocialLoginButton({required IconData icon, required String label, required VoidCallback onTap}) {
-    return SizedBox(
-      height: 52,
-      child: OutlinedButton(
-        onPressed: onTap,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: const Color(0xFF1E1E1E),
-          side: BorderSide.none,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  Widget _buildSocialLoginButtons() {
+    return Column(
+      children: [
+        const SizedBox(height: 24),
+        _buildSocialLoginButton(
+          icon: Icons.phone_iphone,
+          label: 'Đăng nhập bằng Apple ID',
+          onTap: () => _handleSocialLogin('Apple'),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.white),
-            const SizedBox(width: 12),
-            Text(label, style: const TextStyle(color: Colors.white)),
-          ],
+        const SizedBox(height: 12),
+        _buildSocialLoginButton(
+          icon: Icons.login, // Hoặc Icons.g_mobiledata
+          label: 'Đăng nhập bằng Google',
+          onTap: () => _handleGoogleSignIn(), // Đổi sang hàm xử lý Google thật
         ),
+      ],
+    );
+  }
+
+  Widget _buildSocialLoginButton({
+    required IconData icon,
+    required String label,
+    Color? color,
+    VoidCallback? onTap,
+  }) {
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 52),
+        backgroundColor: const Color(0xFF1E1E1E),
+        side: BorderSide.none,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color ?? Colors.white),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 16),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _handleFacebookSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      await AuthService.signInWithFacebook(ref);
+
+      // Sau khi hàm trên chạy xong, kiểm tra lại state
+      if (mounted && ref.read(authProvider).isLoggedIn) {
+        context.go('/'); // Chuyển về trang chủ
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi Facebook: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      // 1. Mở popup đăng nhập Google
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        // User hủy đăng nhập
+        return;
+      }
+
+      // 2. Lấy thông tin Auth (idToken)
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+
+      if (idToken == null) {
+        throw Exception('Không lấy được idToken từ Google');
+      }
+
+      // 3. Gọi API Backend qua Repository
+      final loginData = await _authRepository.loginWithGoogle(idToken);
+
+      final String token = loginData['accessToken'];
+      // Kiểm tra userId, tùy backend trả về 'userId' hay 'id'
+      final int userId = loginData['userId'] ?? loginData['id'];
+
+      // 4. Lấy Profile chi tiết
+      final userModel = await _authRepository.getMe(token, userId);
+
+      // 5. Cập nhật Provider
+      ref.read(authProvider.notifier).setAuth(token, userModel);
+
+      if (mounted) {
+        context.go('/'); // Đăng nhập thành công thì về trang chủ
+      }
+
+    } on DioException catch (e) {
+      String errorMessage = 'Đăng nhập Google thất bại';
+      if (e.response?.data is Map) {
+        errorMessage = e.response?.data['message'] ?? errorMessage;
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Widget _buildTermsText() {
