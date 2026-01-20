@@ -58,7 +58,7 @@ class DioClient {
     BaseOptions(
       baseUrl: Env.apiBase, // Lấy URL từ Env
       connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 20),
+      receiveTimeout: const Duration(seconds: 60),
       responseType: ResponseType.json,
       // Cho phép tất cả status code dưới 500 đều được coi là thành công (tùy chọn)
       // validateStatus: (status) => status != null && status < 500,

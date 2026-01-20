@@ -10,6 +10,7 @@ import '../data/home_api.dart';
 import '../../article/presentation/providers/article_list_provider.dart';
 import '../../article/presentation/widgets/article_page.dart';
 import '../../article/domain/entities/article_entity.dart';
+import '../../article/domain/services/article_service.dart';
 
 /// Provider để kiểm tra quyền Admin từ bộ nhớ máy
 // final userRoleProvider = FutureProvider<String?>((ref) async {
@@ -23,23 +24,46 @@ final healthProvider = FutureProvider<String>((ref) async {
   return HomeApi(dio).health();
 });
 
+// Provider for Most Viewed Articles
+final mostViewedArticleListProvider =
+    FutureProvider<List<ArticleEntity>>((ref) async {
+  final articleService = ref.read(articleServiceProvider);
+  final allArticles = await articleService.getAllArticles();
+  // For demonstration, let's assume articles have a 'viewCount' field
+  // In a real app, you would fetch genuinely most viewed articles.
+  allArticles.sort((a, b) => (b.viewCount ?? 0).compareTo(a.viewCount ?? 0));
+  return allArticles.take(10).toList();
+});
+
+// Provider for Business Articles
+final businessArticlesProvider =
+    FutureProvider<List<ArticleEntity>>((ref) async {
+  final articleService = ref.read(articleServiceProvider);
+  final allArticles = await articleService.getAllArticles();
+  return allArticles
+      .where((article) => article.category?.toLowerCase() == 'kinh doanh')
+      .toList();
+});
+
+// Provider for World Articles
+final worldArticlesProvider = FutureProvider<List<ArticleEntity>>((ref) async {
+  final articleService = ref.read(articleServiceProvider);
+  final allArticles = await articleService.getAllArticles();
+  return allArticles
+      .where((article) => article.category?.toLowerCase() == 'thế giới')
+      .toList();
+});
+
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // // Lắng nghe quyền của người dùng (ADMIN/USER)
-    // final userRoleAsync = ref.watch(userRoleProvider);
-// 1. THAY ĐỔI QUAN TRỌNG: Nghe trực tiếp từ authProvider
-    // Khi đăng nhập thành công bên kia, authProvider đổi state -> Widget này vẽ lại ngay lập tức
     final authState = ref.watch(authProvider);
-    // 2. Kiểm tra quyền Admin từ biến authState (RAM) thay vì đọc ổ cứng
-    // Dùng .toUpperCase() để chắc chắn 'admin' hay 'ADMIN' đều nhận
     final bool isAdmin = authState.user?.role?.toUpperCase() == 'ADMIN';
     final categories = const [
       'Trang chủ',
       'Mới nhất',
-      'Đọc nhanh',
       'Xem nhiều',
       'Kinh doanh',
       'Thế giới',
@@ -67,14 +91,11 @@ class HomePage extends ConsumerWidget {
             ],
             body: TabBarView(
               children: [
-                const _NewsTab(),
-                ...List.generate(
-                  categories.length - 1,
-                      (_) => const Center(
-                    child: Text('Đang cập nhật...',
-                        style: TextStyle(color: Colors.white70)),
-                  ),
-                ),
+                const _NewsTab(), // Trang chủ
+                const _LatestArticlesTab(), // Mới nhất
+                const _MostViewedArticlesTab(), // Xem nhiều
+                const _BusinessArticlesTab(), // Kinh doanh
+                const _WorldArticlesTab(), // Thế giới
               ],
             ),
           ),
@@ -94,11 +115,11 @@ class HomePage extends ConsumerWidget {
           // Dùng biến isAdmin đã tính ở trên, cực nhanh và mượt
           floatingActionButton: isAdmin
               ? FloatingActionButton(
-            backgroundColor: const Color(0xFFbb1819),
-            child: const Icon(Icons.add, color: Colors.white),
-            onPressed: () => context.push('/add-article'), // Đảm bảo route này đúng trong router của Han
-          )
-              : null, // Nếu không phải admin thì ẩn luôn
+                  backgroundColor: const Color(0xFFbb1819),
+                  child: const Icon(Icons.add, color: Colors.white),
+                  onPressed: () => context.push('/add-article'),
+                )
+              : null,
 
           bottomNavigationBar: _BottomNav(
             onTap: (i) {
@@ -113,123 +134,189 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-final _selectedSortProvider = StateProvider<String>((ref) => 'newest');
+class _LatestArticlesTab extends ConsumerWidget {
+  const _LatestArticlesTab();
 
-// --- WIDGET HIỂN THỊ DANH SÁCH TIN ---
-class _NewsTab extends ConsumerStatefulWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncArticles = ref.watch(articleListProvider);
+
+    return asyncArticles.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text('Lỗi tải tin mới nhất: $err',
+              style: const TextStyle(color: Colors.red)),
+        ),
+      ),
+      data: (articles) {
+        if (articles.isEmpty) {
+          return const Center(
+              child: Text("Chưa có bài báo mới nhất",
+                  style: TextStyle(color: Colors.white70)));
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          itemCount: articles.length,
+          separatorBuilder: (_, __) =>
+              const Divider(height: 1, color: Color(0xFF2A2C30)),
+          itemBuilder: (context, index) {
+            return _ArticleItem(article: articles[index]);
+          },
+        );
+      },
+    );
+  }
+}
+
+class _MostViewedArticlesTab extends ConsumerWidget {
+  const _MostViewedArticlesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncArticles = ref.watch(mostViewedArticleListProvider);
+
+    return asyncArticles.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text('Lỗi tải tin xem nhiều nhất: $err',
+              style: const TextStyle(color: Colors.red)),
+        ),
+      ),
+      data: (articles) {
+        if (articles.isEmpty) {
+          return const Center(
+              child: Text("Chưa có bài báo xem nhiều nhất",
+                  style: TextStyle(color: Colors.white70)));
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          itemCount: articles.length,
+          separatorBuilder: (_, __) =>
+              const Divider(height: 1, color: Color(0xFF2A2C30)),
+          itemBuilder: (context, index) {
+            return _ArticleItem(article: articles[index]);
+          },
+        );
+      },
+    );
+  }
+}
+
+class _BusinessArticlesTab extends ConsumerWidget {
+  const _BusinessArticlesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncArticles = ref.watch(businessArticlesProvider);
+
+    return asyncArticles.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text('Lỗi tải tin kinh doanh: $err',
+              style: const TextStyle(color: Colors.red)),
+        ),
+      ),
+      data: (articles) {
+        if (articles.isEmpty) {
+          return const Center(
+              child: Text("Chưa có bài báo kinh doanh",
+                  style: TextStyle(color: Colors.white70)));
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          itemCount: articles.length,
+          separatorBuilder: (_, __) =>
+              const Divider(height: 1, color: Color(0xFF2A2C30)),
+          itemBuilder: (context, index) {
+            return _ArticleItem(article: articles[index]);
+          },
+        );
+      },
+    );
+  }
+}
+
+class _WorldArticlesTab extends ConsumerWidget {
+  const _WorldArticlesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncArticles = ref.watch(worldArticlesProvider);
+
+    return asyncArticles.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text('Lỗi tải tin thế giới: $err',
+              style: const TextStyle(color: Colors.red)),
+        ),
+      ),
+      data: (articles) {
+        if (articles.isEmpty) {
+          return const Center(
+              child: Text("Chưa có bài báo thế giới",
+                  style: TextStyle(color: Colors.white70)));
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          itemCount: articles.length,
+          separatorBuilder: (_, __) =>
+              const Divider(height: 1, color: Color(0xFF2A2C30)),
+          itemBuilder: (context, index) {
+            return _ArticleItem(article: articles[index]);
+          },
+        );
+      },
+    );
+  }
+}
+
+// --- WIDGET HIỂN THỊ DANH SÁCH TIN (Generic Tab for Home) ---
+class _NewsTab extends ConsumerWidget {
   const _NewsTab();
 
   @override
-  ConsumerState<_NewsTab> createState() => _NewsTabState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncArticles = ref.watch(articleListProvider);
 
-class _NewsTabState extends ConsumerState<_NewsTab> {
-  @override
-  Widget build(BuildContext context) {
-    final selectedSort = ref.watch(_selectedSortProvider);
-    final asyncArticles = ref.watch(articleListProvider(selectedSort));
-
-    return Stack(
-      children: [
-        Column(
-          children: [
-            Expanded(
-              child: asyncArticles.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text('Lỗi tải tin: $err',
-                        style: const TextStyle(color: Colors.red)),
-                  ),
-                ),
-                data: (articles) {
-                  if (articles.isEmpty) {
-                    return const Center(
-                        child: Text("Chưa có bài báo nào",
-                            style: TextStyle(color: Colors.white70)));
-                  }
-
-                  return ListView.separated(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    itemCount: articles.length,
-                    separatorBuilder: (_, __) =>
-                    const Divider(height: 1, color: Color(0xFF2A2C30)),
-                    itemBuilder: (context, index) {
-                      return _ArticleItem(article: articles[index]);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+    return asyncArticles.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text('Lỗi tải tin: $err',
+              style: const TextStyle(color: Colors.red)),
         ),
-        Positioned(
-          top: 8.0, // Khoảng cách từ trên xuống
-          right: 16.0, // Khoảng cách từ phải sang
-          child: SizedBox(
-            width: 160, // Điều chỉnh chiều rộng theo ý muốn
-            child: PopupMenuButton<String>(
-              color: const Color(0xFF1E2023),
-              initialValue: selectedSort,
-              onSelected: (String newValue) {
-                ref.read(_selectedSortProvider.notifier).state = newValue;
-              },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                PopupMenuItem<String>(
-                  value: 'newest',
-                  child: Text('Mới nhất', style: TextStyle(color: selectedSort == 'newest' ? const Color(0xFFbb1819) : Colors.white)),
-                ),
-                PopupMenuItem<String>(
-                  value: 'most_viewed',
-                  child: Text('Xem nhiều', style: TextStyle(color: selectedSort == 'most_viewed' ? const Color(0xFFbb1819) : Colors.white)),
-                ),
-                PopupMenuItem<String>(
-                  value: 'most_liked',
-                  child: Text('Thích nhiều', style: TextStyle(color: selectedSort == 'most_liked' ? const Color(0xFFbb1819) : Colors.white)),
-                ),
-              ],
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E2023),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFF2A2C30)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.filter_list, color: const Color(0xFFbb1819)),
-                    SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        _getSortText(selectedSort),
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Icon(Icons.arrow_drop_down, color: Colors.white70),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
+      data: (articles) {
+        if (articles.isEmpty) {
+          return const Center(
+              child: Text("Chưa có bài báo nào",
+                  style: TextStyle(color: Colors.white70)));
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          itemCount: articles.length,
+          separatorBuilder: (_, __) =>
+              const Divider(height: 1, color: Color(0xFF2A2C30)),
+          itemBuilder: (context, index) {
+            return _ArticleItem(article: articles[index]);
+          },
+        );
+      },
     );
-  }
-
-  String _getSortText(String sortValue) {
-    switch (sortValue) {
-      case 'newest':
-        return 'Mới nhất';
-      case 'most_viewed':
-        return 'Xem nhiều';
-      case 'most_liked':
-        return 'Thích nhiều';
-      default:
-        return 'Mới nhất';
-    }
   }
 }
 
@@ -240,9 +327,14 @@ class _ArticleItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String categoryName = (article.category == null || article.category!.isEmpty) ? 'Tin tức' : article.category!;
+    final String categoryName =
+        (article.category == null || article.category!.isEmpty)
+            ? 'Tin tức'
+            : article.category!;
     final String authorName = article.authorName ?? 'Admin';
-    final String publishedDate = article.publishedAt != null ? DateFormat('dd/MM').format(article.publishedAt!) : '--/--';
+    final String publishedDate = article.publishedAt != null
+        ? DateFormat('dd/MM').format(article.publishedAt!)
+        : '--/--';
 
     return InkWell(
       onTap: () => context.push('/article/${article.id ?? article.title}'),
@@ -255,8 +347,14 @@ class _ArticleItem extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               child: Image.network(
                 article.imageUrl ?? "https://via.placeholder.com/150",
-                width: 110, height: 80, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(width: 110, height: 80, color: const Color(0xFF2A2C30), child: const Icon(Icons.image_not_supported)),
+                width: 110,
+                height: 80,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                    width: 110,
+                    height: 80,
+                    color: const Color(0xFF2A2C30),
+                    child: const Icon(Icons.image_not_supported)),
               ),
             ),
             const SizedBox(width: 12),
@@ -264,20 +362,40 @@ class _ArticleItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(article.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text(article.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15)),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: const Color(0xFFbb1819).withOpacity(0.2), borderRadius: BorderRadius.circular(4)),
-                        child: Text(categoryName.toUpperCase(), style: const TextStyle(color: Color(0xFFbb1819), fontSize: 10, fontWeight: FontWeight.bold)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                            color: const Color(0xFFbb1819).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(4)),
+                        child: Text(categoryName.toUpperCase(),
+                            style: const TextStyle(
+                                color: Color(0xFFbb1819),
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold)),
                       ),
                       const SizedBox(width: 8),
-                      Expanded(child: Text(authorName, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey, fontSize: 11))),
-                      const Icon(Icons.access_time, size: 12, color: Colors.grey),
+                      Expanded(
+                          child: Text(authorName,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 11))),
+                      const Icon(Icons.access_time,
+                          size: 12, color: Colors.grey),
                       const SizedBox(width: 4),
-                      Text(publishedDate, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                      Text(publishedDate,
+                          style: const TextStyle(
+                              color: Colors.grey, fontSize: 11)),
                     ],
                   )
                 ],
@@ -306,12 +424,14 @@ class _TopAppBar extends StatelessWidget {
         children: [
           _VnxNews(),
           const SizedBox(width: 8),
-          const Text('Báo tiếng Việt cập nhật nhanh nhất', style: TextStyle(color: Colors.white70, fontSize: 11)),
+          const Text('Báo tiếng Việt cập nhật nhanh nhất',
+              style: TextStyle(color: Colors.white70, fontSize: 11)),
         ],
       ),
       actions: [
         // 1. NÚT LOGIN: Chỉ hiện khi CHƯA đăng nhập (!isLoggedIn)
-        IconButton(icon: const Icon(Icons.login, color: Colors.white70),
+        IconButton(
+            icon: const Icon(Icons.login, color: Colors.white70),
             tooltip: 'Đăng nhập',
             onPressed: () => context.push('/login')),
         // const Padding(padding: EdgeInsets.only(right: 8),
@@ -330,7 +450,8 @@ class _TopAppBar extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(right: 8),
           child: GestureDetector(
-            onTap: () => context.push('/notification'), // 🆕 chuyển sang trang thông báo
+            onTap: () =>
+                context.push('/notification'), // 🆕 chuyển sang trang thông báo
             child: const _CircleIcon(icon: Icons.notifications_none),
           ),
         ),
@@ -349,7 +470,11 @@ class _CategoryTabs extends StatelessWidget {
       pinned: true,
       delegate: _TabHeaderDelegate(
         child: Container(
-          decoration: const BoxDecoration(color: Color(0xFF191A1D), border: Border(top: BorderSide(color: Color(0xFF2A2C30)), bottom: BorderSide(color: Color(0xFF2A2C30)))),
+          decoration: const BoxDecoration(
+              color: Color(0xFF191A1D),
+              border: Border(
+                  top: BorderSide(color: Color(0xFF2A2C30)),
+                  bottom: BorderSide(color: Color(0xFF2A2C30)))),
           child: TabBar(
             tabAlignment: TabAlignment.start,
             isScrollable: true,
@@ -372,7 +497,11 @@ class _VnxNews extends StatelessWidget {
       children: [
         Image.asset('assets/images/logo_VNXnews.png', height: 26),
         const SizedBox(width: 6),
-        const Text('Vnx news', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+        const Text('Vnx news',
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2)),
       ],
     );
   }
@@ -385,7 +514,10 @@ class _CircleIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.all(6),
-      decoration: BoxDecoration(color: const Color(0xFF1E2023), shape: BoxShape.circle, border: Border.all(color: const Color(0xFF2A2C30))),
+      decoration: BoxDecoration(
+          color: const Color(0xFF1E2023),
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFF2A2C30))),
       child: Icon(icon, color: Colors.white, size: 18),
     );
   }
@@ -402,11 +534,13 @@ class _BottomNav extends StatelessWidget {
       selectedIndex: 0,
       onDestinationSelected: onTap,
       destinations: const [
-        NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Trang chủ'),
+        NavigationDestination(
+            icon: Icon(Icons.home_outlined), label: 'Trang chủ'),
         NavigationDestination(icon: Icon(Icons.search), label: 'A.I Search'),
         NavigationDestination(icon: Icon(Icons.chat), label: 'Bot'),
         NavigationDestination(icon: Icon(Icons.ondemand_video), label: 'Video'),
-        NavigationDestination(icon: Icon(Icons.menu_open_outlined), label: 'Menu'),
+        NavigationDestination(
+            icon: Icon(Icons.menu_open_outlined), label: 'Menu'),
       ],
     );
   }
@@ -415,8 +549,12 @@ class _BottomNav extends StatelessWidget {
 class _TabHeaderDelegate extends SliverPersistentHeaderDelegate {
   _TabHeaderDelegate({required this.child});
   final Widget child;
-  @override double get minExtent => 44;
-  @override double get maxExtent => 44;
-  @override Widget build(context, shrink, overlap) => child;
-  @override bool shouldRebuild(old) => false;
+  @override
+  double get minExtent => 44;
+  @override
+  double get maxExtent => 44;
+  @override
+  Widget build(context, shrink, overlap) => child;
+  @override
+  bool shouldRebuild(old) => false;
 }

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
-// Đảm bảo import đúng đường dẫn file của bạn
+// Đảm bảo đúng đường dẫn các file trong dự án của bạn
+import '../../../../core/config/env.dart';
 import '../../data/models/user.dart';
 import '../../domain/services/auth_service.dart';
 import '../providers/auth_provider.dart';
@@ -15,12 +18,67 @@ class EditAccountPage extends ConsumerStatefulWidget {
 }
 
 class _EditAccountPageState extends ConsumerState<EditAccountPage> {
-  // Define Colors chuẩn theo ảnh Dark Mode
   final Color _bgApp = const Color(0xFF18191B);
   final Color _bgInput = const Color(0xFF2B2C30);
   final Color _textWhite = Colors.white;
   final Color _textGrey = const Color(0xFF9E9E9E);
   final Color _dividerColor = Colors.white10;
+
+  // --- THÊM BIẾN PHỤC VỤ UPLOAD ---
+  final ImagePicker _picker = ImagePicker();
+  bool _isUploading = false;
+
+  // --- THÊM HÀM LOGIC UPLOAD ---
+  Future<void> _pickAndUploadImage() async {
+    final auth = ref.read(authProvider);
+    if (auth.token == null || auth.user == null) return;
+
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+
+    if (image != null) {
+      setState(() => _isUploading = true);
+      try {
+        // 1. Gọi API upload
+        String newAvatarPath = await AuthService.uploadAvatar(
+          auth.token!,
+          auth.user!.id,
+          image.path,
+        );
+
+        // 2. Cập nhật Model (Giữ nguyên các trường khác, chỉ đổi avatarUrl)
+        final currentUser = auth.user!;
+        final updatedUser = UserModel(
+          id: currentUser.id,
+          email: currentUser.email,
+          displayName: currentUser.displayName,
+          phone: currentUser.phone,
+          gender: currentUser.gender,
+          location: currentUser.location,
+          avatarUrl: newAvatarPath,
+        );
+
+        // 3. Cập nhật Provider
+        ref.read(authProvider.notifier).updateUser(updatedUser);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Cập nhật ảnh đại diện thành công")),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Lỗi: ${e.toString()}"), backgroundColor: Colors.red),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isUploading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +88,11 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
     if (user == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+
+    // --- LOGIC HIỂN THỊ URL ẢNH ---
+    final String? fullAvatarUrl = (user.avatarUrl != null && user.avatarUrl!.isNotEmpty)
+        ? (user.avatarUrl!.startsWith('http') ? user.avatarUrl : '${Env.apiBase}${user.avatarUrl}')
+        : null;
 
     return Scaffold(
       backgroundColor: _bgApp,
@@ -52,72 +115,57 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
           children: [
             const SizedBox(height: 24),
 
-            // ============ AVATAR AREA ============
+            // ============ CẬP NHẬT GIAO DIỆN AVATAR ============
             Stack(
               alignment: Alignment.center,
               children: [
                 CircleAvatar(
                   radius: 45,
                   backgroundColor: const Color(0xFFA62D50),
-                  backgroundImage: (user.avatarUrl != null && user.avatarUrl!.isNotEmpty)
-                      ? NetworkImage(user.avatarUrl!)
-                      : null,
-                  child: (user.avatarUrl == null || user.avatarUrl!.isEmpty)
-                      ? Text(
-                    (user.displayName ?? "U").substring(0, 1).toUpperCase(),
-                    style: const TextStyle(fontSize: 40, color: Colors.white),
-                  )
-                      : null,
+                  backgroundImage: fullAvatarUrl != null ? NetworkImage(fullAvatarUrl) : null,
+                  child: _isUploading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : (fullAvatarUrl == null
+                      ? Text((user.displayName ?? "U").substring(0, 1).toUpperCase(),
+                      style: const TextStyle(fontSize: 40, color: Colors.white))
+                      : null),
                 ),
                 Positioned(
                   bottom: 0,
                   right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
+                  child: GestureDetector(
+                    onTap: _isUploading ? null : _pickAndUploadImage,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                      child: const Icon(Icons.camera_alt, color: Colors.black54, size: 18),
                     ),
-                    child: const Icon(Icons.camera_alt,
-                        color: Colors.black54, size: 18),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             InkWell(
-              onTap: () {
-                // TODO: Xử lý logic upload ảnh
-              },
+              onTap: _isUploading ? null : _pickAndUploadImage,
               borderRadius: BorderRadius.circular(4),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _bgInput,
-                  borderRadius: BorderRadius.circular(4),
-                ),
+                decoration: BoxDecoration(color: _bgInput, borderRadius: BorderRadius.circular(4)),
                 child: const Text(
                   "Thay ảnh đại diện",
-                  style: TextStyle(
-                      color: Colors.white70,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13),
+                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ),
             ),
 
             const SizedBox(height: 30),
 
-            // ============ SECTION: TÀI KHOẢN ============
             _buildSectionHeader("Tài khoản"),
-            const Divider(height: 1, color: Colors.white10),
-
             _buildItem(
               icon: Icons.email_outlined,
               label: "Email",
               value: user.email,
               isEditable: false,
-              hasEditIcon: true,
             ),
             _buildItem(
               icon: Icons.lock_outline,
@@ -139,11 +187,7 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
             ),
 
             const SizedBox(height: 20),
-
-            // ============ SECTION: THÔNG TIN CÁ NHÂN ============
             _buildSectionHeader("Thông tin cá nhân"),
-            const Divider(height: 1, color: Colors.white10),
-
             _buildItem(
               icon: Icons.badge_outlined,
               label: "Họ và tên",
@@ -155,20 +199,16 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
                 onSave: (val) => _updateUserOnServer(displayName: val),
               ),
             ),
-
-            // --- SỬA LẠI MỤC GIỚI TÍNH ---
             _buildItem(
               icon: Icons.wc,
               label: "Giới tính",
               value: user.gender ?? "Khác",
               isEditable: true,
-              // Gọi trực tiếp hàm Dialog, không bọc trong _buildItem khác
               onTap: () => _showGenderSelectionDialog(
                 currentValue: user.gender,
                 onSave: (val) => _updateUserOnServer(gender: val),
               ),
             ),
-
             _buildItem(
               icon: Icons.location_on_outlined,
               label: "Địa điểm",
@@ -182,26 +222,13 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
             ),
 
             const SizedBox(height: 30),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "VnExpress cam kết bảo mật thông tin của bạn.",
-                style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
+            Text("VnExpress cam kết bảo mật thông tin của bạn.",
+                style: TextStyle(color: Colors.grey[600], fontSize: 13)),
             const SizedBox(height: 20),
-            const Divider(height: 1, color: Colors.white10),
-
             ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
               leading: const Icon(Icons.delete_outline, color: Colors.red),
               title: const Text("Xóa tài khoản", style: TextStyle(color: Colors.red)),
-              onTap: () {
-                // Logic xóa tài khoản
-              },
+              onTap: () {},
             ),
             const SizedBox(height: 40),
           ],
@@ -210,61 +237,33 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
     );
   }
 
-  // --- API HELPER ---
-  Future<void> _updateUserOnServer({
-    String? displayName,
-    String? phoneNumber,
-    String? gender,
-    String? address,
-  }) async {
+  Future<void> _updateUserOnServer({String? displayName, String? phoneNumber, String? gender, String? address}) async {
     final authState = ref.read(authProvider);
-    if (authState.token == null || authState.user == null) return;
-
+    final user = authState.user;
+    if (authState.token == null || user == null) return;
     try {
-      final updatedUser = await AuthService.updateUser(
-        authState.token!,
-        authState.user!.id,
-        {
-          "displayName": displayName ?? authState.user!.displayName,
-          "phoneNumber": phoneNumber ?? authState.user!.phone,
-          "gender": gender ?? authState.user!.gender,
-          "address": address ?? authState.user!.location,
-        },
-      );
-
+      final updatedUser = await AuthService.updateUser(authState.token!, user.id, {
+        "displayName": displayName ?? user.displayName,
+        "phoneNumber": phoneNumber ?? user.phone,
+        "gender": gender ?? user.gender,
+        "address": address ?? user.location,
+      });
       ref.read(authProvider.notifier).updateUser(updatedUser);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Cập nhật thành công")),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cập nhật thành công")));
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Lỗi: ${e.toString()}")),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Lỗi: ${e.toString()}")));
     }
   }
 
-  // --- WIDGET HELPER ---
   Widget _buildSectionHeader(String title) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.only(left: 16, bottom: 8),
+      padding: const EdgeInsets.only(left: 16, bottom: 8, top: 16),
       child: Text(title, style: TextStyle(color: _textGrey, fontSize: 14)),
     );
   }
 
-  Widget _buildItem({
-    required IconData icon,
-    required String label,
-    required String value,
-    required bool isEditable,
-    bool hasEditIcon = true,
-    VoidCallback? onTap,
-  }) {
+  Widget _buildItem({required IconData icon, required String label, required String value, required bool isEditable, VoidCallback? onTap}) {
     return Column(
       children: [
         InkWell(
@@ -279,24 +278,13 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(label,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold)),
+                      Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
-                      Text(
-                        value,
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 15),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      Text(value, style: const TextStyle(color: Colors.white70, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
                     ],
                   ),
                 ),
-                if (hasEditIcon)
-                  Icon(Icons.edit, color: Colors.grey[700], size: 18),
+                if (isEditable) Icon(Icons.edit, color: Colors.grey[700], size: 18),
               ],
             ),
           ),
@@ -306,12 +294,7 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
     );
   }
 
-  // --- DIALOG EDIT TEXT ---
-  void _showEditDialog({
-    required String title,
-    String? currentValue,
-    required Function(String) onSave,
-  }) {
+  void _showEditDialog({required String title, String? currentValue, required Function(String) onSave}) {
     final controller = TextEditingController(text: currentValue ?? "");
     showDialog(
       context: context,
@@ -321,92 +304,41 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
         content: TextField(
           controller: controller,
           style: TextStyle(color: _textWhite),
-          decoration: InputDecoration(
-            hintText: "Nhập $title mới",
-            hintStyle: TextStyle(color: _textGrey),
-            enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: _textGrey)),
-            focusedBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.blue)),
-          ),
+          autofocus: true,
+          decoration: InputDecoration(enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: _textGrey))),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Hủy", style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () {
-              onSave(controller.text);
-              Navigator.pop(ctx);
-            },
-            child: const Text("Lưu", style: TextStyle(color: Colors.blue)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Hủy")),
+          TextButton(onPressed: () { onSave(controller.text); Navigator.pop(ctx); }, child: const Text("Lưu")),
         ],
       ),
     );
   }
 
-  // --- DIALOG CHỌN GIỚI TÍNH (Đã tách ra ngoài) ---
-  void _showGenderSelectionDialog({
-    String? currentValue,
-    required Function(String) onSave,
-  }) {
+  void _showGenderSelectionDialog({String? currentValue, required Function(String) onSave}) {
     String selectedGender = (currentValue == "Nữ") ? "Nữ" : "Nam";
-
     showDialog(
       context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: _bgInput,
-              title: Text("Chọn giới tính", style: TextStyle(color: _textWhite)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildRadioOption("Nam", selectedGender, (val) {
-                    setState(() => selectedGender = val);
-                  }),
-                  _buildRadioOption("Nữ", selectedGender, (val) {
-                    setState(() => selectedGender = val);
-                  }),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text("Hủy", style: TextStyle(color: Colors.grey)),
-                ),
-                TextButton(
-                  onPressed: () {
-                    onSave(selectedGender);
-                    Navigator.pop(ctx);
-                  },
-                  child: const Text("Lưu", style: TextStyle(color: Colors.blue)),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSt) => AlertDialog(
+          backgroundColor: _bgInput,
+          title: const Text("Chọn giới tính"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile(title: const Text("Nam"), value: "Nam", groupValue: selectedGender, onChanged: (v) => setSt(() => selectedGender = v.toString())),
+              RadioListTile(title: const Text("Nữ"), value: "Nữ", groupValue: selectedGender, onChanged: (v) => setSt(() => selectedGender = v.toString())),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Hủy")),
+            TextButton(onPressed: () { onSave(selectedGender); Navigator.pop(ctx); }, child: const Text("Lưu")),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildRadioOption(String label, String groupValue, Function(String) onChanged) {
-    return RadioListTile<String>(
-      title: Text(label, style: TextStyle(color: _textWhite)),
-      value: label,
-      groupValue: groupValue,
-      activeColor: Colors.blue,
-      contentPadding: EdgeInsets.zero,
-      onChanged: (val) {
-        if (val != null) onChanged(val);
-      },
-    );
-  }
-
-  // --- MODAL ĐỔI MẬT KHẨU ---
   void _showChangePasswordModal(BuildContext context, int userId) {
     final oldPassCtrl = TextEditingController();
     final newPassCtrl = TextEditingController();
@@ -508,7 +440,7 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
               ),
               Center(
                 child: TextButton(
-                    onPressed: () {},
+                    onPressed: () => context.push('/forgot-password'),
                     child: const Text("Quên mật khẩu",
                         style: TextStyle(
                             color: Colors.grey,
@@ -520,7 +452,6 @@ class _EditAccountPageState extends ConsumerState<EditAccountPage> {
       },
     );
   }
-
   Widget _buildPasswordInput(TextEditingController controller, String hint) {
     return TextField(
       controller: controller,

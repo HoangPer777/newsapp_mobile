@@ -3,11 +3,148 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // FIX 1: Thêm import này để hết lỗi WidgetRef
 import '../../data/models/user.dart';
 import '../../../../core/config/env.dart';
-import '../../presentation/providers/auth_provider.dart'; // FIX 2: Import provider để gọi được authProvider
+import '../../presentation/providers/auth_provider.dart';// FIX 2: Import provider để gọi được authProvider
+import 'package:http_parser/http_parser.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 class AuthService {
-  // FIX 3: Khai báo biến _baseUrl bị thiếu
+
   static final String _baseUrl = '${Env.apiBase}/auth';
+
+  static Future<void> signInWithFacebook(WidgetRef ref) async {
+    try {
+      // 1. Mở popup đăng nhập Facebook
+      final LoginResult result = await FacebookAuth.instance.login(
+        permissions: ['email', 'public_profile'], // Yêu cầu quyền lấy email và profile
+      );
+
+      if (result.status == LoginStatus.success) {
+        // 2. Lấy AccessToken thành công
+        final AccessToken accessToken = result.accessToken!;
+
+        // Gửi token sang Spring Boot (Dùng .token thay vì .tokenString)
+        final response = await http.post(
+          Uri.parse('${Env.apiBase}/auth/facebook'),
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({"fbToken": accessToken.token}),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final String token = data['accessToken'];
+          final int userId = data['userId'];
+
+          // 3. Lấy Profile chi tiết từ hệ thống của bạn
+          final user = await getMe(token, userId);
+
+          // 4. Lưu vào AuthProvider
+          ref.read(authProvider.notifier).setAuth(token, user);
+
+          print("Đăng nhập Facebook thành công!");
+        } else {
+          throw Exception('Server xác thực Facebook thất bại');
+        }
+      } else {
+        print("Facebook Login Status: ${result.status}");
+        print("Message: ${result.message}");
+      }
+    } catch (e) {
+      print("Lỗi Facebook Login chi tiết: $e");
+    }
+  }
+
+  static final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: '307674059153-9djp3m9qqief5t5q9reslqoddeo4abls.apps.googleusercontent.com',
+  );
+
+  static Future<void> signInWithGoogle(WidgetRef ref) async {
+    try {
+      // 1. Mở popup chọn tài khoản
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return;
+
+      // 2. Lấy idToken
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+
+      if (idToken != null) {
+        // 3. Gửi idToken lên Spring Boot
+        final response = await http.post(
+          Uri.parse('${Env.apiBase}/auth/google'),
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({"idToken": idToken}),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          // 4. Lấy Profile và lưu vào Riverpod
+          final user = await getMe(data['accessToken'], data['userId']);
+          ref.read(authProvider.notifier).setAuth(data['accessToken'], user);
+        }
+        else {
+          final body = jsonDecode(response.body);
+          throw Exception(body['message'] ?? 'Google login failed');
+        }
+      }
+    } catch (e) {
+      print("Lỗi: $e");
+    }
+  }
+
+  static Future<String> uploadAvatar(String token, int uid, String filePath) async {
+    var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/upload-avatar?uid=$uid'));
+    request.headers['Authorization'] = 'Bearer $token';
+    request.files.add(await http.MultipartFile.fromPath(
+      'file',
+      filePath,
+      contentType: MediaType('image', 'jpeg'),
+    ));
+
+    var streamedResponse = await request.send();
+    var response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['avatarUrl']; // Trả về link ảnh mới
+    } else {
+      throw Exception('Upload ảnh thất bại');
+    }
+  }
+
+  // 1. Gửi yêu cầu mã OTP
+  static Future<void> forgotPassword(String email) async {
+    final res = await http.post(
+      Uri.parse('$_baseUrl/forgot-password'),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"email": email}),
+    );
+    if (res.statusCode != 200) {
+      String msg = 'Email không tồn tại hoặc lỗi hệ thống';
+      try {
+        final body = jsonDecode(res.body);
+        if (body['message'] != null) msg = body['message'];
+      } catch (_) {}
+      throw Exception(msg);
+    }
+  }
+
+  // 2. Xác nhận mã và đặt mật khẩu mới
+  static Future<void> resetPassword(String email, String token, String newPassword) async {
+    final res = await http.post(
+      Uri.parse('$_baseUrl/reset-password'),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "email": email,
+        "token": token,
+        "newPassword": newPassword,
+      }),
+    );
+    if (res.statusCode != 200) {
+      final body = jsonDecode(res.body);
+      throw Exception(body['message'] ?? 'Mã xác nhận không đúng hoặc đã hết hạn');
+    }
+  }
 
   static Future<void> loginAndFetchProfile(WidgetRef ref, String email, String password) async {
     final res = await http.post(
@@ -20,10 +157,7 @@ class AuthService {
       final data = jsonDecode(res.body);
       String token = data['accessToken'];
 
-      // Kiểm tra xem backend trả về userId hay id
       int uid = data['userId'] ?? data['id'];
-
-      // Gọi tiếp API lấy profile đầy đủ
       UserModel user = await getMe(token, uid);
 
       // Lưu vào Riverpod Provider
