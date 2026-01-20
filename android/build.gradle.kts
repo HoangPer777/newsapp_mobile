@@ -21,6 +21,14 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+subprojects {
+    project.configurations.all {
+        resolutionStrategy {
+            force("androidx.activity:activity:1.9.3")
+        }
+    }
+}
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }

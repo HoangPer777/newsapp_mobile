@@ -139,7 +139,7 @@ class _LatestArticlesTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncArticles = ref.watch(articleListProvider);
+    final asyncArticles = ref.watch(articleListProvider('newest'));
 
     return asyncArticles.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -288,7 +288,7 @@ class _NewsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncArticles = ref.watch(articleListProvider);
+    final asyncArticles = ref.watch(articleListProvider(null));
 
     return asyncArticles.when(
       loading: () => const Center(child: CircularProgressIndicator()),

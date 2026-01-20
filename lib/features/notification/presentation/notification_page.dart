@@ -45,9 +45,13 @@ class _NotificationPageState extends State<NotificationPage> {
 
           if (snapshot.hasError) {
             return Center(
-              child: Text(
-                'Lỗi tải thông báo',
-                style: TextStyle(color: Colors.redAccent),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'Lỗi tải thông báo: ${snapshot.error}',
+                  style: const TextStyle(color: Colors.redAccent),
+                  textAlign: TextAlign.center,
+                ),
               ),
             );
           }

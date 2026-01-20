@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../../core/config/env.dart';
 import '../model/article_notification.dart';
 
 class NotificationService {
-  static const String baseUrl =
-      'http://10.0.2.2:8080/api/articles/notifications/new';
-  // ⚠ Android emulator dùng 10.0.2.2 thay localhost
+  static final String baseUrl =
+      '${Env.apiBase}/api/articles/notifications/new';
 
   static Future<List<ArticleNotification>> fetchNotifications() async {
+    print('Fetching notifications from: $baseUrl');
     final response = await http.get(Uri.parse(baseUrl));
 
     if (response.statusCode == 200) {
@@ -16,7 +17,8 @@ class NotificationService {
           .map((e) => ArticleNotification.fromJson(e))
           .toList();
     } else {
-      throw Exception('Không thể tải thông báo');
+      throw Exception(
+          'Không thể tải thông báo. Status: ${response.statusCode}. Body: ${response.body}');
     }
   }
 }

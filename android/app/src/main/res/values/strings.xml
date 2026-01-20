@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">newsapp_mobile</string>
-    <string name="facebook_app_id">900773755841732</string>
-    <string name="fb_login_protocol_scheme">fb900773755841732</string>
-    <string name="facebook_client_token">58fa57facc399fd3bd15300054e8bf40</string>
+    <string name="facebook_app_id">1353331819876074</string>
+    <string name="fb_login_protocol_scheme">fb1353331819876074</string>
+    <string name="facebook_client_token">a5e684bf85e47e2e41dcc70fa217741f</string>
 </resources>

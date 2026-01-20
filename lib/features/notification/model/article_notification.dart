@@ -17,7 +17,9 @@ class ArticleNotification {
       articleId: json['id'] ?? 0,
       title: json['category'] ?? 'Thông báo',
       message: json['title'] ?? '',
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt']) ?? DateTime.now()
+          : DateTime.now(),
     );
   }
 }

@@ -3,20 +3,22 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // FIX 1: Thêm import này để hết lỗi WidgetRef
 import '../../data/models/user.dart';
 import '../../../../core/config/env.dart';
-import '../../presentation/providers/auth_provider.dart';// FIX 2: Import provider để gọi được authProvider
+import '../../presentation/providers/auth_provider.dart'; // FIX 2: Import provider để gọi được authProvider
 import 'package:http_parser/http_parser.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 class AuthService {
-
   static final String _baseUrl = '${Env.apiBase}/auth';
 
   static Future<void> signInWithFacebook(WidgetRef ref) async {
     try {
       // 1. Mở popup đăng nhập Facebook
       final LoginResult result = await FacebookAuth.instance.login(
-        permissions: ['email', 'public_profile'], // Yêu cầu quyền lấy email và profile
+        permissions: [
+          'email',
+          'public_profile'
+        ], // Yêu cầu quyền lấy email và profile
       );
 
       if (result.status == LoginStatus.success) {
@@ -55,7 +57,8 @@ class AuthService {
   }
 
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
-    serverClientId: '307674059153-9djp3m9qqief5t5q9reslqoddeo4abls.apps.googleusercontent.com',
+    serverClientId:
+        '7797438524-ull6k9kur4dhlv993sg23iod0pnblqik.apps.googleusercontent.com',
   );
 
   static Future<void> signInWithGoogle(WidgetRef ref) async {
@@ -65,7 +68,8 @@ class AuthService {
       if (googleUser == null) return;
 
       // 2. Lấy idToken
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
 
       if (idToken != null) {
@@ -81,8 +85,7 @@ class AuthService {
           // 4. Lấy Profile và lưu vào Riverpod
           final user = await getMe(data['accessToken'], data['userId']);
           ref.read(authProvider.notifier).setAuth(data['accessToken'], user);
-        }
-        else {
+        } else {
           final body = jsonDecode(response.body);
           throw Exception(body['message'] ?? 'Google login failed');
         }
@@ -92,8 +95,10 @@ class AuthService {
     }
   }
 
-  static Future<String> uploadAvatar(String token, int uid, String filePath) async {
-    var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/upload-avatar?uid=$uid'));
+  static Future<String> uploadAvatar(
+      String token, int uid, String filePath) async {
+    var request = http.MultipartRequest(
+        'POST', Uri.parse('$_baseUrl/upload-avatar?uid=$uid'));
     request.headers['Authorization'] = 'Bearer $token';
     request.files.add(await http.MultipartFile.fromPath(
       'file',
@@ -130,7 +135,8 @@ class AuthService {
   }
 
   // 2. Xác nhận mã và đặt mật khẩu mới
-  static Future<void> resetPassword(String email, String token, String newPassword) async {
+  static Future<void> resetPassword(
+      String email, String token, String newPassword) async {
     final res = await http.post(
       Uri.parse('$_baseUrl/reset-password'),
       headers: {"Content-Type": "application/json"},
@@ -142,11 +148,13 @@ class AuthService {
     );
     if (res.statusCode != 200) {
       final body = jsonDecode(res.body);
-      throw Exception(body['message'] ?? 'Mã xác nhận không đúng hoặc đã hết hạn');
+      throw Exception(
+          body['message'] ?? 'Mã xác nhận không đúng hoặc đã hết hạn');
     }
   }
 
-  static Future<void> loginAndFetchProfile(WidgetRef ref, String email, String password) async {
+  static Future<void> loginAndFetchProfile(
+      WidgetRef ref, String email, String password) async {
     final res = await http.post(
       Uri.parse('$_baseUrl/login'),
       headers: {"Content-Type": "application/json"},
@@ -183,10 +191,10 @@ class AuthService {
   }
 
   static Future<UserModel> updateUser(
-      String token,
-      int uid,
-      Map<String, dynamic> data,
-      ) async {
+    String token,
+    int uid,
+    Map<String, dynamic> data,
+  ) async {
     final res = await http.put(
       Uri.parse('$_baseUrl/update?uid=$uid'),
       headers: {
@@ -202,12 +210,13 @@ class AuthService {
 
     return UserModel.fromJson(jsonDecode(res.body));
   }
+
   static Future<void> changePassword(
-      String token,
-      int uid,
-      String oldPassword,
-      String newPassword,
-      ) async {
+    String token,
+    int uid,
+    String oldPassword,
+    String newPassword,
+  ) async {
     final res = await http.post(
       Uri.parse('$_baseUrl/change-password?uid=$uid'),
       headers: {

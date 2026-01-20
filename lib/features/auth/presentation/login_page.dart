@@ -8,7 +8,6 @@ import '../../menu/domain/services/auth_service.dart';
 import '../data/auth_repository.dart';
 import '../../menu/presentation/providers/auth_provider.dart';
 
-
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -26,7 +25,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     // Dùng mã WEB Client ID (lấy từ Google Cloud Console)
-    serverClientId: '307674059153-9djp3m9qqief5t5q9reslqoddeo4abls.apps.googleusercontent.com',
+    serverClientId:
+        '7797438524-ull6k9kur4dhlv993sg23iod0pnblqik.apps.googleusercontent.com',
     scopes: ['email', 'profile'],
   );
 
@@ -120,14 +120,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               children: [
                 const SizedBox(height: 32),
                 Center(child: _buildTitleWithLink()),
-
                 const SizedBox(height: 40),
-                const Text('Email', style: TextStyle(color: Colors.white, fontSize: 14)),
+                const Text('Email',
+                    style: TextStyle(color: Colors.white, fontSize: 14)),
                 const SizedBox(height: 8),
                 _buildEmailField(),
-
                 const SizedBox(height: 24),
-                const Text('Mật khẩu', style: TextStyle(color: Colors.white, fontSize: 14)),
+                const Text('Mật khẩu',
+                    style: TextStyle(color: Colors.white, fontSize: 14)),
                 const SizedBox(height: 8),
                 _buildPasswordField(),
                 const SizedBox(height: 12),
@@ -137,21 +137,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     onTap: () => context.push('/forgot-password'),
                     child: const Text(
                       'Quên mật khẩu?',
-                      style: TextStyle(color: Color(0xFFBB1819), fontSize: 14, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: Color(0xFFBB1819),
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
                 const SizedBox(height: 32),
                 _buildContinueButton(),
-
                 const SizedBox(height: 24),
                 _buildSeparator(),
-
                 const SizedBox(height: 24),
                 _buildSocialLoginButton(
                   icon: Icons.facebook,
                   label: 'Đăng nhập bằng Facebook',
-                  onTap: () => _handleFacebookSignIn(), // Gọi hàm handler thay vì gọi trực tiếp Service
+                  onTap: () =>
+                      _handleFacebookSignIn(), // Gọi hàm handler thay vì gọi trực tiếp Service
                 ),
                 const SizedBox(height: 12),
                 _buildSocialLoginButton(
@@ -159,7 +161,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   label: 'Đăng nhập bằng Google',
                   onTap: () => _handleGoogleSignIn(),
                 ),
-
                 const SizedBox(height: 40),
                 _buildTermsText(),
                 const SizedBox(height: 24),
@@ -179,10 +180,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
-          child: Image.asset('assets/images/logo_VNXnews.png', height: 26, width: 26, fit: BoxFit.cover),
+          child: Image.asset('assets/images/logo_VNXnews.png',
+              height: 26, width: 26, fit: BoxFit.cover),
         ),
         const SizedBox(width: 6),
-        const Text('Vnx news', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+        const Text('Vnx news',
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2)),
       ],
     );
   }
@@ -191,14 +197,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return RichText(
       text: TextSpan(
         text: '',
-        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+        style: const TextStyle(
+            fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
         children: [
           const TextSpan(text: 'Đăng nhập / '),
           WidgetSpan(
             alignment: PlaceholderAlignment.middle,
             child: GestureDetector(
               onTap: () => context.push('/register'),
-              child: const Text('Tạo tài khoản', style: TextStyle(color: Color(0xFFBB1819), fontSize: 18, fontWeight: FontWeight.bold)),
+              child: const Text('Tạo tài khoản',
+                  style: TextStyle(
+                      color: Color(0xFFBB1819),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -208,7 +219,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   Widget _buildEmailField() {
     return Container(
-      decoration: BoxDecoration(color: const Color(0xFF1E1E1E), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+          color: const Color(0xFF1E1E1E),
+          borderRadius: BorderRadius.circular(12)),
       child: TextFormField(
         controller: _emailController,
         style: const TextStyle(color: Colors.white),
@@ -219,14 +232,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         ),
-        validator: (v) => (v == null || !v.contains('@')) ? 'Email không hợp lệ' : null,
+        validator: (v) =>
+            (v == null || !v.contains('@')) ? 'Email không hợp lệ' : null,
       ),
     );
   }
 
   Widget _buildPasswordField() {
     return Container(
-      decoration: BoxDecoration(color: const Color(0xFF1E1E1E), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+          color: const Color(0xFF1E1E1E),
+          borderRadius: BorderRadius.circular(12)),
       child: TextFormField(
         controller: _passwordController,
         obscureText: _obscurePassword,
@@ -236,13 +252,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           hintStyle: const TextStyle(color: Colors.white54),
           prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
           suffixIcon: IconButton(
-            icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: Colors.white70),
-            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+            icon: Icon(
+                _obscurePassword
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+                color: Colors.white70),
+            onPressed: () =>
+                setState(() => _obscurePassword = !_obscurePassword),
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+          contentPadding:
+              const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         ),
-        validator: (v) => (v == null || v.length < 6) ? 'Mật khẩu tối thiểu 6 ký tự' : null,
+        validator: (v) =>
+            (v == null || v.length < 6) ? 'Mật khẩu tối thiểu 6 ký tự' : null,
       ),
     );
   }
@@ -254,11 +277,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         onPressed: _isLoading ? null : _handleContinue,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFFBB1819),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: _isLoading
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-            : const Text('Tiếp tục', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    color: Colors.white, strokeWidth: 2))
+            : const Text('Tiếp tục',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
       ),
     );
   }
@@ -267,7 +299,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return Row(
       children: [
         const Expanded(child: Divider(color: Colors.white12)),
-        const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('hoặc', style: TextStyle(color: Colors.white54))),
+        const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text('hoặc', style: TextStyle(color: Colors.white54))),
         const Expanded(child: Divider(color: Colors.white12)),
       ],
     );
@@ -332,7 +366,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi Facebook: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Lỗi Facebook: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -374,7 +409,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       if (mounted) {
         context.go('/'); // Đăng nhập thành công thì về trang chủ
       }
-
     } on DioException catch (e) {
       String errorMessage = 'Đăng nhập Google thất bại';
       if (e.response?.data is Map) {
@@ -403,9 +437,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         text: 'Khi tiếp tục, bạn đồng ý với ',
         style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.5),
         children: [
-          TextSpan(text: 'điều khoản sử dụng', style: TextStyle(color: Colors.white, decoration: TextDecoration.underline)),
+          TextSpan(
+              text: 'điều khoản sử dụng',
+              style: TextStyle(
+                  color: Colors.white, decoration: TextDecoration.underline)),
           TextSpan(text: ' và '),
-          TextSpan(text: 'chính sách bảo mật', style: TextStyle(color: Colors.white, decoration: TextDecoration.underline)),
+          TextSpan(
+              text: 'chính sách bảo mật',
+              style: TextStyle(
+                  color: Colors.white, decoration: TextDecoration.underline)),
           TextSpan(text: ' của VNX.', style: TextStyle(color: Colors.white54)),
         ],
       ),
